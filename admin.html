@@ -241,6 +241,10 @@
         window.categories = [];
         window.resources = [];
         
+        // Admin kimlik bilgileri
+        window.ADMIN_USERNAME = 'admin';
+        window.ADMIN_PASSWORD = 'sinirbilim2025';
+        
         // Firebase'den verileri yükle
         function loadFromFirebase() {
             console.log("Kategoriler doğrudan Firebase'den yükleniyor...");
@@ -253,6 +257,12 @@
                         return { ...value, id: key };
                     });
                     console.log("Kategoriler yüklendi:", window.categories.length);
+                    
+                    // Admin panelindeki kategorileri güncelle
+                    if (typeof renderCategories === 'function') {
+                        renderCategories();
+                        updateCategoryFilters();
+                    }
                 } else {
                     console.log("Kategoriler bulunamadı");
                 }
@@ -266,15 +276,36 @@
                         return { ...value, id: key };
                     });
                     console.log("Kaynaklar yüklendi:", window.resources.length);
+                    
+                    // Admin panelindeki kaynakları güncelle
+                    if (typeof renderResources === 'function') {
+                        renderResources();
+                    }
                 } else {
                     console.log("Kaynaklar bulunamadı");
                 }
             });
         }
         
-        // Sayfa yüklendiğinde verileri yükle
+        // Otomatik giriş fonksiyonu
+        function autoLogin() {
+            console.log("Otomatik giriş yapılıyor...");
+            localStorage.setItem('adminLoggedIn', 'true');
+            
+            const loginSection = document.getElementById('login-section');
+            const dashboardSection = document.getElementById('dashboard-section');
+            
+            if (loginSection && dashboardSection) {
+                loginSection.classList.add('hidden');
+                dashboardSection.classList.remove('hidden');
+                console.log("Admin paneline giriş yapıldı");
+            }
+        }
+        
+        // Sayfa yüklendiğinde verileri yükle ve otomatik giriş yap
         document.addEventListener('DOMContentLoaded', function() {
             loadFromFirebase();
+            setTimeout(autoLogin, 500); // Sayfanın yüklenmesi için biraz zaman ver
         });
     </script>
     
