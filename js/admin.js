@@ -18,42 +18,25 @@ const firebaseConfig = {
 let firebaseInitialized = false;
 let db;
 
-// Yerel geliştirme veya dosya sistemi üzerinden çalışırken veri yedekleme
-let localCategories = [];
-let localResources = [];
-
 try {
-    // Check if running from file:// protocol
-    const isLocalFile = window.location.protocol === 'file:';
+    // Global firebase nesnesi ile Firebase başlatma
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    firebaseInitialized = true;
+    console.log("Firebase başarıyla başlatıldı.");
     
-    if (isLocalFile) {
-        console.warn("Admin paneli dosya sisteminden (file://) çalıştırılıyor. Firebase güvenlik nedeniyle çalışmayacak.");
-        console.warn("Lütfen admin paneline şu adres üzerinden erişin: https://kutuphane.sinirbilimportali.org/admin.html");
-        
-        // Yerel veri yükleme
-        const storedCategories = localStorage.getItem('sinirbilimportali_categories');
-        if (storedCategories) {
-            localCategories = JSON.parse(storedCategories);
+    // Firebase'in bağlantı durumunu izle
+    const connectedRef = firebase.database().ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            console.log("Firebase veritabanına bağlantı sağlandı.");
+        } else {
+            console.log("Firebase veritabanına bağlantı kesildi.");
         }
-        
-        const storedResources = localStorage.getItem('sinirbilimportali_resources');
-        if (storedResources) {
-            localResources = JSON.parse(storedResources);
-        }
-        
-        // Dosya sisteminden çalışırken bildirim göster
-        setTimeout(() => {
-            alert("Admin paneli dosya sisteminden açılmış. Firebase bağlantısı çalışmayacak.\n\nLütfen admin paneline şu adresten erişin:\nhttps://kutuphane.sinirbilimportali.org/admin.html");
-        }, 1000);
-    } else {
-        // Normal Firebase başlatma (http veya https protokolü)
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        firebaseInitialized = true;
-        console.log("Firebase başarıyla başlatıldı.");
-    }
+    });
 } catch (error) {
     console.error("Firebase başlatılamadı:", error);
+    alert("Firebase başlatma hatası: " + error.message);
 }
 
 // Data structure for categories and resources
@@ -395,58 +378,116 @@ function switchTab(tabId) {
  * Load data from localStorage or Firebase
  */
 function loadData() {
-    // Dosya sisteminden çalışırken yerel verileri kullan
-    if (window.location.protocol === 'file:') {
-        console.log("Dosya sisteminden çalışıyor, yerel verileri kullanıyorum...");
-        categories = localCategories;
-        resources = localResources;
-        renderCategories();
-        renderResources();
-        updateCategoryFilters();
-        return;
-    }
-
     if (firebaseInitialized) {
         // Firebase'den verileri yükle
-        console.log("Firebase'den veri yükleniyor...");
+        console.log("Firebase'den veri yükleme işlemi başlatılıyor...");
         
         // Kategorileri yükle
+        console.log("Kategoriler için Firebase referansı:", db.ref("categories").toString());
+        
         db.ref("categories").on("value", (snapshot) => {
+            console.log("Kategori verileri snapshot alındı:", snapshot.exists() ? "Veri var" : "Veri yok");
+            
             const fbCategories = snapshot.val();
             if (fbCategories) {
-                categories = Object.entries(fbCategories).map(([key, value]) => {
-                    return { ...value, id: key };
-                });
-                console.log("Firebase'den kategoriler yüklendi:", categories);
-                renderCategories();
-                updateCategoryFilters();
+                console.log("Firebase'den alınan ham kategori verileri:", fbCategories);
+                
+                try {
+                    categories = Object.entries(fbCategories).map(([key, value]) => {
+                        return { ...value, id: key };
+                    });
+                    console.log("İşlenmiş kategori verileri:", categories);
+                    renderCategories();
+                    updateCategoryFilters();
+                } catch (error) {
+                    console.error("Kategori verilerini işlerken hata:", error);
+                    alert("Kategori verileri işlenirken hata: " + error.message);
+                }
             } else {
-                console.log("Firebase'de hiç kategori bulunamadı");
-                // Firebase'de veri yoksa localStorage'dan yükle
-                loadFromLocalStorage();
+                console.log("Firebase'de hiç kategori bulunamadı, localStorage kontrol ediliyor");
+                
+                // Yerel depolamadan yüklemeyi dene
+                const storedCategories = localStorage.getItem('sinirbilimportali_categories');
+                if (storedCategories) {
+                    try {
+                        categories = JSON.parse(storedCategories);
+                        console.log("Kategoriler localStorage'dan yüklendi:", categories);
+                        renderCategories();
+                        updateCategoryFilters();
+                    } catch (e) {
+                        console.error("localStorage'dan kategori yükleme hatası:", e);
+                    }
+                } else {
+                    console.log("localStorage'da da kategori bulunamadı, boş bir liste kullanılacak");
+                    categories = [];
+                    renderCategories();
+                }
             }
+        }, (error) => {
+            console.error("Firebase kategori yükleme hatası:", error);
+            alert("Firebase'den kategoriler yüklenirken hata: " + error.message);
+            
+            // Hata durumunda localStorage'dan yüklemeyi dene
+            loadFromLocalStorage();
         });
             
         // Kaynakları yükle
+        console.log("Kaynaklar için Firebase referansı:", db.ref("resources").toString());
+        
         db.ref("resources").on("value", (snapshot) => {
+            console.log("Kaynak verileri snapshot alındı:", snapshot.exists() ? "Veri var" : "Veri yok");
+            
             const fbResources = snapshot.val();
             if (fbResources) {
-                resources = Object.entries(fbResources).map(([key, value]) => {
-                    return { ...value, id: key };
-                });
-                console.log("Firebase'den kaynaklar yüklendi:", resources.length + " kaynak var");
-                renderResources();
+                console.log("Firebase'den kaynaklar yükleniyor, toplam:", Object.keys(fbResources).length);
+                
+                try {
+                    resources = Object.entries(fbResources).map(([key, value]) => {
+                        return { ...value, id: key };
+                    });
+                    console.log("Kaynaklar başarıyla yüklendi, ilk birkaç örnek:", resources.slice(0, 2));
+                    renderResources();
+                } catch (error) {
+                    console.error("Kaynak verilerini işlerken hata:", error);
+                    alert("Kaynak verileri işlenirken hata: " + error.message);
+                }
             } else {
-                console.log("Firebase'de hiç kaynak bulunamadı");
-                // Firebase'de veri yoksa localStorage'dan yükle (kategoriler zaten yüklendi)
+                console.log("Firebase'de hiç kaynak bulunamadı, localStorage kontrol ediliyor");
+                
+                // Yerel depolamadan yüklemeyi dene
                 const storedResources = localStorage.getItem('sinirbilimportali_resources');
                 if (storedResources) {
+                    try {
+                        resources = JSON.parse(storedResources);
+                        console.log("Kaynaklar localStorage'dan yüklendi:", resources.length);
+                        renderResources();
+                    } catch (e) {
+                        console.error("localStorage'dan kaynak yükleme hatası:", e);
+                    }
+                } else {
+                    console.log("localStorage'da da kaynak bulunamadı, boş bir liste kullanılacak");
+                    resources = [];
+                    renderResources();
+                }
+            }
+        }, (error) => {
+            console.error("Firebase kaynak yükleme hatası:", error);
+            alert("Firebase'den kaynaklar yüklenirken hata: " + error.message);
+            
+            // Hata durumunda localStorage'dan yüklemeyi dene
+            const storedResources = localStorage.getItem('sinirbilimportali_resources');
+            if (storedResources) {
+                try {
                     resources = JSON.parse(storedResources);
+                    renderResources();
+                } catch (e) {
+                    console.error("localStorage'dan kaynak yükleme hatası:", e);
                 }
             }
         });
     } else {
         // Firebase başlatılamadıysa localStorage'dan yükle
+        console.log("Firebase başlatılamadı, localStorage'dan veri yükleniyor");
         loadFromLocalStorage();
     }
 }
@@ -512,8 +553,11 @@ function saveResources() {
  * Render categories list
  */
 function renderCategories() {
-    const categoriesList = document.getElementById('categories-list');
-    if (!categoriesList) return;
+    const categoriesList = document.getElementById('categories-container');
+    if (!categoriesList) {
+        console.error("categories-container ID'li element bulunamadı!");
+        return;
+    }
     
     categoriesList.innerHTML = '';
     
@@ -553,7 +597,12 @@ function renderCategories() {
  * Render resources list
  */
 function renderResources(filterCategoryId = '') {
-    const resourcesList = document.getElementById('resources-list');
+    const resourcesList = document.getElementById('resources-container');
+    if (!resourcesList) {
+        console.error("resources-container ID'li element bulunamadı!");
+        return;
+    }
+    
     resourcesList.innerHTML = '';
 
     // Filter resources by category if specified
@@ -666,9 +715,13 @@ function renderResources(filterCategoryId = '') {
  * Update category filters in resource section
  */
 function updateCategoryFilters() {
-    const categoryFilter = document.getElementById('resource-category-filter');
-    const resourceCategory = document.getElementById('resource-category');
+    // Ana kategoriler filtresi
+    const categoryFilter = document.getElementById('category-filter');
     
+    // Bulk resources için kategori seçimi
+    const bulkResourcesCategory = document.getElementById('bulk-resources-category');
+    
+    // Önce category-filter için güncelleme yap
     if (categoryFilter) {
         // Keep the first option (All Categories)
         categoryFilter.innerHTML = '<option value="">Tüm Kategoriler</option>';
@@ -680,18 +733,23 @@ function updateCategoryFilters() {
             option.textContent = category.title;
             categoryFilter.appendChild(option);
         });
+    } else {
+        console.error("'category-filter' ID'li element bulunamadı!");
     }
     
-    if (resourceCategory) {
-        resourceCategory.innerHTML = '';
+    // Sonra bulk-resources-category için güncelleme yap
+    if (bulkResourcesCategory) {
+        bulkResourcesCategory.innerHTML = '';
         
         // Add categories
         categories.forEach(category => {
             const option = document.createElement('option');
             option.value = category.id;
             option.textContent = category.title;
-            resourceCategory.appendChild(option);
+            bulkResourcesCategory.appendChild(option);
         });
+    } else {
+        console.error("'bulk-resources-category' ID'li element bulunamadı!");
     }
 }
 
@@ -988,7 +1046,7 @@ function handleResourceSave(event) {
     saveResources();
     
     // Update UI
-    renderResources(document.getElementById('resource-category-filter').value);
+    renderResources(document.getElementById('category-filter').value);
     
     // Close modal
     closeResourceModal();
@@ -1328,7 +1386,7 @@ function parseBulkResources() {
     }
     
     const lines = bulkResourcesText.split('\n').filter(line => line.trim() !== '');
-    const categoryId = document.getElementById('resource-category').value;
+    const categoryId = document.getElementById('bulk-resources-category').value;
     
     if (!categoryId) {
         alert('Lütfen bir kategori seçin!');
