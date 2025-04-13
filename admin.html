@@ -85,6 +85,10 @@
                         <textarea id="bulk-resources-text" rows="10" placeholder="Goldstein R, Vitevitch MS, Shafiro V. (2022) Effects of Age and Musical Background on the Neural Correlates of Speech Perception. Brain Lang. 227:105-117. https://example.com"></textarea>
                     </div>
                     <button id="parse-bulk-btn" class="btn">Analiz Et</button>
+                    <div id="bulk-resources-preview" class="bulk-preview-container">
+                        <!-- Parsed resources will be shown here -->
+                    </div>
+                    <button id="save-bulk-resources-btn" class="btn primary-btn" style="display: none;">Kaynakları Kaydet</button>
                 </div>
             </div>
 
@@ -155,23 +159,28 @@
                 </div>
                 <div class="form-group">
                     <label for="resource-authors">Yazar(lar)</label>
-                    <input type="text" id="resource-authors" required>
+                    <input type="text" id="resource-authors">
                 </div>
                 <div class="form-group">
                     <label for="resource-year">Yıl</label>
-                    <input type="number" id="resource-year" required>
+                    <input type="number" id="resource-year">
                 </div>
                 <div class="form-group">
                     <label for="resource-title">Başlık</label>
-                    <input type="text" id="resource-title" required>
+                    <input type="text" id="resource-title">
                 </div>
                 <div class="form-group">
                     <label for="resource-journal">Dergi/Yayıncı</label>
                     <input type="text" id="resource-journal">
                 </div>
                 <div class="form-group">
-                    <label for="resource-url">URL</label>
-                    <input type="url" id="resource-url" required>
+                    <label>URL'ler (En az bir URL gerekli)</label>
+                    <div class="url-container">
+                        <div class="url-row">
+                            <input type="url" class="resource-url" required>
+                            <button type="button" class="add-url-btn">+</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="resource-notes">Notlar (İsteğe Bağlı)</label>
