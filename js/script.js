@@ -1,9 +1,167 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize accordion functionality for categories
-    initCategoryAccordion();
+    // Firebase yapılandırması
+    const firebaseConfig = {
+        apiKey: "AIzaSyAWCI8GDMCDeknLgKJidhBp2f86OHgZsYU",
+        authDomain: "sinirbilimportali-kaynaklar.firebaseapp.com",
+        databaseURL: "https://sinirbilimportali-kaynaklar-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "sinirbilimportali-kaynaklar",
+        storageBucket: "sinirbilimportali-kaynaklar.firebasestorage.app",
+        messagingSenderId: "750308737969",
+        appId: "1:750308737969:web:788597d7c7fba399527390"
+    };
+
+    // Firebase başlatma
+    let firebaseInitialized = false;
+    let db;
+
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        firebaseInitialized = true;
+        console.log("Firebase başarıyla başlatıldı.");
+        
+        // Firebase'den verileri yükle
+        loadCategoriesFromFirebase();
+    } catch (error) {
+        console.error("Firebase başlatılamadı:", error);
+        // Firebase başlatılamazsa statik içeriği kullan
+        initCategoryAccordion();
+        initSearch();
+    }
     
-    // Initialize search functionality
-    initSearch();
+    // Firebase'den kategorileri ve kaynakları yükle
+    function loadCategoriesFromFirebase() {
+        if (!firebaseInitialized) {
+            initCategoryAccordion();
+            initSearch();
+            return;
+        }
+        
+        // Kategorileri dinle
+        db.ref("categories").on("value", (snapshot) => {
+            const categoriesData = snapshot.val();
+            if (categoriesData) {
+                console.log("Firebase'den kategoriler yükleniyor...");
+                
+                // Kaynakları da yükle
+                db.ref("resources").once("value", (resourcesSnapshot) => {
+                    const resourcesData = resourcesSnapshot.val();
+                    
+                    // HTML oluştur
+                    generateCategoryHTML(categoriesData, resourcesData);
+                });
+            } else {
+                console.log("Firebase'de kategori bulunamadı, statik içerik kullanılıyor.");
+                initCategoryAccordion();
+                initSearch();
+            }
+        });
+    }
+    
+    // Firebase verilerinden HTML oluştur
+    function generateCategoryHTML(categoriesData, resourcesData) {
+        // Kategoriler container
+        const categoriesContainer = document.querySelector(".categories-container");
+        if (!categoriesContainer) return;
+        
+        let html = '';
+        
+        // Kategorileri döngüye al
+        Object.entries(categoriesData).forEach(([categoryId, category]) => {
+            html += `<!-- ${category.title} Category -->
+            <div class="category" id="${categoryId}">
+                <div class="category-header">
+                    <h2>${category.title}</h2>
+                    <span class="toggle-icon">+</span>
+                </div>
+                <div class="category-content">
+                    <ul class="resource-list">`;
+            
+            // Bu kategorideki kaynakları filtrele
+            const categoryResources = resourcesData ? 
+                Object.entries(resourcesData)
+                    .filter(([_, resource]) => resource.categoryId === categoryId)
+                    .map(([id, resource]) => ({id, ...resource})) 
+                : [];
+            
+            if (categoryResources.length === 0) {
+                html += `<li class="resource-item">Bu kategoride henüz kaynak bulunmamaktadır.</li>`;
+            } else {
+                // Kaynakları ekle
+                categoryResources.forEach((resource, index) => {
+                    const resourceId = `${categoryId}-resource-${index}`;
+                    
+                    html += `<li class="resource-item">
+                        <a href="#" class="resource-title" onclick="toggleResourceLinks('${resourceId}'); return false;">
+                            ${resource.authors ? resource.authors : ''} ${resource.year ? `(${resource.year})` : ''} ${resource.title}
+                        </a>
+                        <div id="${resourceId}" class="resource-links" style="display: none;">
+                            <div class="resource-citation">${formatCitation(resource)}</div>`;
+                    
+                    if (resource.urls && resource.urls.length > 0) {
+                        html += `<ul class="url-list">`;
+                        resource.urls.forEach((url, urlIndex) => {
+                            html += `<li><a href="${url}" target="_blank">Kaynak Bağlantısı ${urlIndex + 1}</a></li>`;
+                        });
+                        html += `</ul>`;
+                    } else if (resource.url) {
+                        html += `<ul class="url-list">
+                            <li><a href="${resource.url}" target="_blank">Kaynak Bağlantısı</a></li>
+                        </ul>`;
+                    }
+                    
+                    html += `</div>
+                    </li>`;
+                });
+            }
+            
+            html += `</ul>
+                </div>
+            </div>`;
+        });
+        
+        // HTML'i sayfaya ekle
+        categoriesContainer.innerHTML = html;
+        
+        // Accordion fonksiyonunu başlat
+        initCategoryAccordion();
+        
+        // Arama fonksiyonunu başlat
+        initSearch();
+    }
+    
+    // Kaynak formatını oluştur
+    function formatCitation(resource) {
+        let citation = '';
+        
+        if (resource.authors) {
+            citation += resource.authors;
+        }
+        
+        if (resource.year) {
+            citation += ` (${resource.year})`;
+        }
+        
+        if (resource.title) {
+            citation += ` <em>${resource.title}</em>.`;
+        }
+        
+        if (resource.journal) {
+            citation += ` <strong>${resource.journal}`;
+            
+            if (resource.volume) {
+                citation += `, ${resource.volume}`;
+            }
+            
+            citation += '</strong>';
+        }
+        
+        if (resource.pages) {
+            citation += `, ${resource.pages}`;
+        }
+        
+        return citation;
+    }
 });
 
 // Function to toggle resource links visibility
