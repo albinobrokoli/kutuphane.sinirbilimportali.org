@@ -150,7 +150,7 @@ function initializeUI() {
     
     const categoryForm = document.getElementById('category-form');
     if (categoryForm) {
-        categoryForm.addEventListener('submit', handleCategorySave);
+        categoryForm.addEventListener('submit', handleCategorySubmit);
     }
     
     const cancelCategoryBtn = document.getElementById('cancel-category');
@@ -225,18 +225,13 @@ function initializeUI() {
     
     // Add slug generator for category title
     const categoryTitle = document.getElementById('category-title');
-    const categorySlug = document.getElementById('category-slug');
-    if (categoryTitle && categorySlug) {
+    if (categoryTitle) {
         categoryTitle.addEventListener('input', () => {
             // Only auto-generate slug if it's empty or matches previous auto-generation
-            if (!categorySlug.dataset.manuallyEdited) {
-                categorySlug.value = generateSlug(categoryTitle.value);
-            }
-        });
-        
-        categorySlug.addEventListener('input', () => {
-            // Mark as manually edited
-            categorySlug.dataset.manuallyEdited = 'true';
+            // const categorySlug = document.getElementById('category-slug');
+            // if (!categorySlug.dataset.manuallyEdited) {
+            //     categorySlug.value = generateSlug(categoryTitle.value);
+            // }
         });
     }
     
@@ -375,33 +370,40 @@ function switchTab(tabId) {
 }
 
 /**
- * Load data from localStorage or Firebase
+ * Load data from Firebase and localStorage
  */
 function loadData() {
+    console.log("Veriler yükleniyor...");
+    
     if (firebaseInitialized) {
-        // Firebase'den verileri yükle
-        console.log("Firebase'den veri yükleme işlemi başlatılıyor...");
+        console.log("Firebase'den veri yükleme başlatılıyor");
         
         // Kategorileri yükle
-        console.log("Kategoriler için Firebase referansı:", db.ref("categories").toString());
-        
-        db.ref("categories").on("value", (snapshot) => {
-            console.log("Kategori verileri snapshot alındı:", snapshot.exists() ? "Veri var" : "Veri yok");
+        db.ref("categories").once("value", (snapshot) => {
+            console.log("Firebase kategori verisi döndü:", snapshot.val());
             
-            const fbCategories = snapshot.val();
-            if (fbCategories) {
-                console.log("Firebase'den alınan ham kategori verileri:", fbCategories);
+            if (snapshot.exists()) {
+                // Firebase'den kategorileri al
+                const categoriesData = snapshot.val();
                 
-                try {
-                    categories = Object.entries(fbCategories).map(([key, value]) => {
-                        return { ...value, id: key };
-                    });
-                    console.log("İşlenmiş kategori verileri:", categories);
-                    renderCategories();
-                    updateCategoryFilters();
-                } catch (error) {
-                    console.error("Kategori verilerini işlerken hata:", error);
-                    alert("Kategori verileri işlenirken hata: " + error.message);
+                if (categoriesData) {
+                    try {
+                        // Nesneden dizi oluştur
+                        categories = [];
+                        Object.keys(categoriesData).forEach(key => {
+                            categories.push({
+                                id: key,
+                                title: categoriesData[key].title || categoriesData[key]
+                            });
+                        });
+                        
+                        console.log(`Firebase'den ${categories.length} kategori yüklendi`);
+                        renderCategories();
+                        updateCategoryFilters();
+                    } catch (error) {
+                        console.error("Kategori verilerini işlerken hata:", error);
+                        alert("Kategori verileri işlenirken hata: " + error.message);
+                    }
                 }
             } else {
                 console.log("Firebase'de hiç kategori bulunamadı, localStorage kontrol ediliyor");
@@ -411,16 +413,17 @@ function loadData() {
                 if (storedCategories) {
                     try {
                         categories = JSON.parse(storedCategories);
-                        console.log("Kategoriler localStorage'dan yüklendi:", categories);
+                        console.log("Kategoriler localStorage'dan yüklendi");
                         renderCategories();
                         updateCategoryFilters();
                     } catch (e) {
                         console.error("localStorage'dan kategori yükleme hatası:", e);
                     }
                 } else {
-                    console.log("localStorage'da da kategori bulunamadı, boş bir liste kullanılacak");
+                    console.log("localStorage'da kategori bulunamadı, boş liste kullanılacak");
                     categories = [];
                     renderCategories();
+                    updateCategoryFilters();
                 }
             }
         }, (error) => {
@@ -428,28 +431,43 @@ function loadData() {
             alert("Firebase'den kategoriler yüklenirken hata: " + error.message);
             
             // Hata durumunda localStorage'dan yüklemeyi dene
-            loadFromLocalStorage();
-        });
-            
-        // Kaynakları yükle
-        console.log("Kaynaklar için Firebase referansı:", db.ref("resources").toString());
-        
-        db.ref("resources").on("value", (snapshot) => {
-            console.log("Kaynak verileri snapshot alındı:", snapshot.exists() ? "Veri var" : "Veri yok");
-            
-            const fbResources = snapshot.val();
-            if (fbResources) {
-                console.log("Firebase'den kaynaklar yükleniyor, toplam:", Object.keys(fbResources).length);
-                
+            const storedCategories = localStorage.getItem('sinirbilimportali_categories');
+            if (storedCategories) {
                 try {
-                    resources = Object.entries(fbResources).map(([key, value]) => {
-                        return { ...value, id: key };
-                    });
-                    console.log("Kaynaklar başarıyla yüklendi, ilk birkaç örnek:", resources.slice(0, 2));
-                    renderResources();
-                } catch (error) {
-                    console.error("Kaynak verilerini işlerken hata:", error);
-                    alert("Kaynak verileri işlenirken hata: " + error.message);
+                    categories = JSON.parse(storedCategories);
+                    renderCategories();
+                    updateCategoryFilters();
+                } catch (e) {
+                    console.error("localStorage'dan kategori yükleme hatası:", e);
+                }
+            }
+        });
+        
+        // Kaynakları yükle
+        db.ref("resources").once("value", (snapshot) => {
+            console.log("Firebase kaynak verisi döndü:", snapshot.val());
+            
+            if (snapshot.exists()) {
+                // Firebase'den kaynakları al
+                const resourcesData = snapshot.val();
+                
+                if (resourcesData) {
+                    try {
+                        // Nesneden dizi oluştur
+                        resources = [];
+                        Object.keys(resourcesData).forEach(key => {
+                            resources.push({
+                                id: key,
+                                ...resourcesData[key]
+                            });
+                        });
+                        
+                        console.log(`Firebase'den ${resources.length} kaynak yüklendi`);
+                        renderResources();
+                    } catch (error) {
+                        console.error("Kaynak verilerini işlerken hata:", error);
+                        alert("Kaynak verileri işlenirken hata: " + error.message);
+                    }
                 }
             } else {
                 console.log("Firebase'de hiç kaynak bulunamadı, localStorage kontrol ediliyor");
@@ -762,19 +780,12 @@ function openCategoryModal(category = null) {
     const categoryForm = document.getElementById('category-form');
     const categoryId = document.getElementById('category-id');
     const categoryTitle = document.getElementById('category-title');
-    const categorySlug = document.getElementById('category-slug');
-    
-    // Reset manually edited flag
-    if (categorySlug) {
-        categorySlug.dataset.manuallyEdited = null;
-    }
     
     if (category) {
         // Edit mode
         modalTitle.textContent = 'Kategori Düzenle';
         categoryId.value = category.id;
         categoryTitle.value = category.title;
-        categorySlug.value = category.id;
     } else {
         // Add mode
         modalTitle.textContent = 'Yeni Kategori Ekle';
@@ -798,93 +809,56 @@ function closeCategoryModal() {
  */
 function openResourceModal(resource = null) {
     const modal = document.getElementById('resource-modal');
-    if (!modal) return;
-    
-    // Clear previous URL entries
-    const urlContainer = document.getElementById('url-container');
-    if (urlContainer) {
-        urlContainer.innerHTML = '';
+    if (!modal) {
+        console.error("resource-modal ID'li element bulunamadı!");
+        return;
     }
     
-    // Set modal title
     const modalTitle = document.getElementById('resource-modal-title');
-    if (modalTitle) {
-        modalTitle.textContent = resource ? 'Kaynak Düzenle' : 'Kaynak Ekle';
-    }
+    const resourceForm = document.getElementById('resource-form');
+    const resourceId = document.getElementById('resource-id');
+    const resourceCategory = document.getElementById('resource-category');
+    const resourceAuthors = document.getElementById('resource-authors');
+    const resourceYear = document.getElementById('resource-year');
+    const resourceTitle = document.getElementById('resource-title');
+    const resourceJournal = document.getElementById('resource-journal');
+    const resourceUrl = document.getElementById('resource-url');
+    const resourceNotes = document.getElementById('resource-notes');
     
-    // Fill form with resource data if editing
-    if (resource) {
-        document.getElementById('resource-id').value = resource.id;
-        document.getElementById('resource-category').value = resource.categoryId;
-        document.getElementById('resource-authors').value = resource.authors;
-        document.getElementById('resource-year').value = resource.year;
-        document.getElementById('resource-title').value = resource.title;
-        document.getElementById('resource-journal').value = resource.journal;
-        document.getElementById('resource-volume').value = resource.volume || '';
-        document.getElementById('resource-pages').value = resource.pages || '';
-        
-        // Add URLs
-        if (resource.urls && resource.urls.length > 0) {
-            resource.urls.forEach((url, index) => {
-                if (index === 0) {
-                    // First URL goes in the default entry
-                    const firstUrlEntry = document.createElement('div');
-                    firstUrlEntry.className = 'url-entry';
-                    firstUrlEntry.innerHTML = `
-                        <div class="url-input-group">
-                            <input type="url" class="resource-url" value="${url}" placeholder="https://..." required>
-                            <button type="button" class="btn add-url-btn">+</button>
-                        </div>
-                        <small>Kaynağın tam URL adresi, https:// ile başlamalı</small>
-                    `;
-                    urlContainer.appendChild(firstUrlEntry);
-                } else {
-                    // Additional URLs get new entries
-                    const urlEntry = document.createElement('div');
-                    urlEntry.className = 'url-entry';
-                    urlEntry.innerHTML = `
-                        <div class="url-input-group">
-                            <input type="url" class="resource-url" value="${url}" placeholder="https://..." required>
-                            <button type="button" class="btn add-url-btn">+</button>
-                            <button type="button" class="btn remove-url-btn">-</button>
-                        </div>
-                        <small>Kaynağın tam URL adresi, https:// ile başlamalı</small>
-                    `;
-                    urlContainer.appendChild(urlEntry);
-                }
-            });
-        } else if (resource.url) {
-            // Convert old format with single URL
-            const urlEntry = document.createElement('div');
-            urlEntry.className = 'url-entry';
-            urlEntry.innerHTML = `
-                <div class="url-input-group">
-                    <input type="url" class="resource-url" value="${resource.url}" placeholder="https://..." required>
-                    <button type="button" class="btn add-url-btn">+</button>
-                </div>
-                <small>Kaynağın tam URL adresi, https:// ile başlamalı</small>
-            `;
-            urlContainer.appendChild(urlEntry);
-        }
+    // Kategorileri güncelle
+    if (resourceCategory) {
+        resourceCategory.innerHTML = '';
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.title;
+            resourceCategory.appendChild(option);
+        });
     } else {
-        // Clear form for new resource
-        document.getElementById('resource-form').reset();
-        document.getElementById('resource-id').value = '';
-        
-        // Add default URL entry
-        const urlEntry = document.createElement('div');
-        urlEntry.className = 'url-entry';
-        urlEntry.innerHTML = `
-            <div class="url-input-group">
-                <input type="url" class="resource-url" placeholder="https://..." required>
-                <button type="button" class="btn add-url-btn">+</button>
-            </div>
-            <small>Kaynağın tam URL adresi, https:// ile başlamalı</small>
-        `;
-        urlContainer.appendChild(urlEntry);
+        console.error("resource-category ID'li element bulunamadı!");
     }
     
-    // Show modal
+    if (resource) {
+        // Edit mode
+        modalTitle.textContent = 'Kaynak Düzenle';
+        resourceId.value = resource.id;
+        resourceCategory.value = resource.categoryId;
+        resourceAuthors.value = resource.authors;
+        resourceYear.value = resource.year;
+        resourceTitle.value = resource.title;
+        resourceJournal.value = resource.journal || '';
+        resourceUrl.value = resource.url;
+        resourceNotes.value = resource.notes || '';
+    } else {
+        // Add mode
+        modalTitle.textContent = 'Yeni Kaynak Ekle';
+        resourceForm.reset();
+        resourceId.value = '';
+        
+        // Günün tarihini varsayılan olarak ayarla
+        resourceYear.value = new Date().getFullYear();
+    }
+    
     modal.style.display = 'block';
 }
 
@@ -913,22 +887,14 @@ function closeModal(modal) {
 /**
  * Handle category form submission
  */
-function handleCategorySave(event) {
+function handleCategorySubmit(event) {
     event.preventDefault();
     
     const categoryId = document.getElementById('category-id').value;
     const categoryTitle = document.getElementById('category-title').value;
-    const categorySlug = document.getElementById('category-slug').value;
     
-    if (!categoryTitle || !categorySlug) {
-        alert('Kategori başlığı ve ID gereklidir!');
-        return;
-    }
-    
-    // Check for duplicate slug (except when editing the same category)
-    const slugExists = categories.some(c => c.id === categorySlug && c.id !== categoryId);
-    if (slugExists) {
-        alert('Bu ID zaten kullanımda. Lütfen benzersiz bir ID girin.');
+    if (!categoryTitle) {
+        alert('Kategori başlığı gereklidir!');
         return;
     }
     
@@ -937,36 +903,22 @@ function handleCategorySave(event) {
         const index = categories.findIndex(c => c.id === categoryId);
         
         if (index !== -1) {
-            const oldId = categories[index].id;
-            
-            // Update category
             categories[index] = {
-                id: categorySlug,
+                id: categoryId,
                 title: categoryTitle
             };
-            
-            // Update resources if category ID changed
-            if (oldId !== categorySlug) {
-                resources.forEach(resource => {
-                    if (resource.categoryId === oldId) {
-                        resource.categoryId = categorySlug;
-                    }
-                });
-            }
         }
     } else {
         // Add new category
+        const newId = generateUniqueId();
         categories.push({
-            id: categorySlug,
+            id: newId,
             title: categoryTitle
         });
     }
     
-    // Save changes
+    // Save and update UI
     saveCategories();
-    saveResources();
-    
-    // Update UI
     renderCategories();
     updateCategoryFilters();
     
@@ -1373,6 +1325,13 @@ function generateSlug(text) {
         .replace(/-+/g, '-')               // Remove consecutive hyphens
         .trim()                            // Trim whitespace
         .replace(/^-+|-+$/g, '');          // Remove leading/trailing hyphens
+}
+
+/**
+ * Generate a unique ID for new items
+ */
+function generateUniqueId() {
+    return 'id_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
 /**
