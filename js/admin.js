@@ -50,8 +50,79 @@ const ADMIN_PASSWORD = 'sinirbilim2025';
 
 // DOM Elements
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+    // Login form
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+    
+    // Tab navigation
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            switchTab(button.getAttribute('data-tab'));
+        });
+    });
+    
+    // Kategori ve Kaynak ekle butonları
+    const addCategoryBtn = document.getElementById('add-category-btn');
+    if (addCategoryBtn) {
+        addCategoryBtn.addEventListener('click', () => openCategoryModal());
+    }
+    
+    const addResourceBtn = document.getElementById('add-resource-btn');
+    if (addResourceBtn) {
+        addResourceBtn.addEventListener('click', () => openResourceModal());
+    }
+    
+    // Toplu kaynak ekleme
+    const parseBulkBtn = document.getElementById('parse-bulk-btn');
+    if (parseBulkBtn) {
+        parseBulkBtn.addEventListener('click', parseBulkResources);
+    }
+    
+    // Kategori form olayları
+    const categoryForm = document.getElementById('category-form');
+    if (categoryForm) {
+        categoryForm.addEventListener('submit', handleCategorySubmit);
+    }
+    
+    // Close modal buttons
+    const closeButtons = document.querySelectorAll('.close-btn');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const modal = button.closest('.modal');
+            if (modal) {
+                closeModal(modal);
+            }
+        });
+    });
+    
+    // Check login status
+    checkLoginStatus();
+    
+    // Debug button
+    const debugBtn = document.getElementById('debug-btn');
+    if (debugBtn) {
+        debugBtn.addEventListener('click', showDebugInfo);
+    }
+    
+    // Load data after login
+    if (localStorage.getItem('adminLoggedIn') === 'true') {
+        loadData();
+    }
 });
+
+// Helper function to close any modal
+function closeModal(modal) {
+    modal.style.display = 'none';
+}
 
 /**
  * Initialize the admin application
@@ -944,7 +1015,7 @@ function handleResourceSave(event) {
     if (bulkResources.length > 0) {
         // Generate IDs for each bulk resource
         bulkResources.forEach(resource => {
-            resource.id = 'resource_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            resource.id = 'resource_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             resources.push(resource);
         });
         
@@ -1338,7 +1409,7 @@ function generateUniqueId() {
  * Parse bulk resources from text
  */
 function parseBulkResources() {
-    const bulkResourcesText = document.getElementById('bulk-resources').value;
+    const bulkResourcesText = document.getElementById('bulk-resources-text').value;
     if (!bulkResourcesText.trim()) {
         alert('Lütfen toplu kaynakları yazı alanına girin!');
         return;
@@ -1373,8 +1444,6 @@ function parseBulkResources() {
             let year = '';
             let title = '';
             let journal = '';
-            let volume = '';
-            let pages = '';
             
             // Try to extract year from citation
             const yearMatch = citation.match(/\((\d{4})\)/);
@@ -1405,39 +1474,36 @@ function parseBulkResources() {
             
             bulkResources.push({
                 categoryId: categoryId,
-                authors: authors,
+                authors: authors || 'Belirtilmemiş',
                 year: year ? parseInt(year) : new Date().getFullYear(),
                 title: title || 'Başlıksız Kaynak',
                 journal: journal || '',
-                volume: volume,
-                pages: pages,
-                urls: urls
+                url: urls[0] // İlk URL'i kaydet
             });
         }
     });
     
     const parsedCount = bulkResources.length;
     if (parsedCount > 0) {
-        alert(`${parsedCount} kaynak başarıyla analiz edildi. Kaydet butonuna tıkladığınızda eklenecekler.`);
+        alert(`${parsedCount} kaynak başarıyla analiz edildi. Kaynaklar listeye eklenecek.`);
         
-        // Show a preview of what was parsed
-        const singleResourceFields = document.getElementById('single-resource-fields');
-        if (singleResourceFields) {
-            singleResourceFields.innerHTML = `
-                <div class="bulk-preview">
-                    <h3>Toplu Kaynak Önizleme (${parsedCount} kaynak)</h3>
-                    <div class="preview-container">
-                        <p>İlk birkaç kaynak:</p>
-                        <ul>
-                            ${bulkResources.slice(0, 3).map(res => `<li>${res.authors} (${res.year}) ${res.title} - ${res.urls.length} URL</li>`).join('')}
-                            ${bulkResources.length > 3 ? `<li>... ve ${bulkResources.length - 3} kaynak daha</li>` : ''}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
+        // Kaynakları veritabanına ekle
+        bulkResources.forEach(resource => {
+            const resourceId = generateUniqueId();
+            resources.push({
+                id: resourceId,
+                ...resource
+            });
+        });
+        
+        // Kaynakları kaydet ve UI'ı güncelle
+        saveResources();
+        renderResources();
+        
+        // Alanı temizle
+        document.getElementById('bulk-resources-text').value = '';
     } else {
-        alert('Hiç kaynak bulunamadı. Metinde URL\\\'ler olduğundan emin olun.');
+        alert('Hiç kaynak bulunamadı. Metinde URL\'ler olduğundan emin olun.');
     }
 }
 
