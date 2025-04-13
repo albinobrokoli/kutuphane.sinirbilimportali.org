@@ -1357,31 +1357,83 @@ function debugFirebaseData() {
     if (firebaseInitialized) {
         console.log("Firebase bağlantısı aktif, veritabanını kontrol ediyorum...");
         
-        // Tüm veri yollarını kontrol et
-        db.ref().once("value", (snapshot) => {
-            const allData = snapshot.val();
-            console.log("Firebase'deki tüm veriler:", allData);
-            
-            if (allData && allData.categories) {
-                console.log("Kategoriler bulundu:", Object.keys(allData.categories).length);
-                categories = Object.entries(allData.categories).map(([key, value]) => {
-                    return { ...value, id: key };
+        // Konsola doğrudan çıktı vererek her adımı göster
+        console.log("Firebase Config:", firebaseConfig);
+        console.log("Database referansı:", db);
+        
+        try {
+            // Tüm veri yollarını kontrol et
+            db.ref().once("value")
+                .then((snapshot) => {
+                    const allData = snapshot.val();
+                    console.log("Firebase'deki tüm veriler:", allData);
+                    
+                    if (allData && allData.categories) {
+                        console.log("Kategoriler bulundu:", Object.keys(allData.categories).length);
+                        categories = Object.entries(allData.categories).map(([key, value]) => {
+                            return { ...value, id: key };
+                        });
+                        renderCategories();
+                        updateCategoryFilters();
+                    } else {
+                        // Kök dizinde categories yoksa, düz categories path'ini dene
+                        db.ref("categories").once("value")
+                            .then(catSnapshot => {
+                                const catData = catSnapshot.val();
+                                console.log("Doğrudan categories yolundan veri:", catData);
+                                if (catData) {
+                                    categories = Object.entries(catData).map(([key, value]) => {
+                                        return { ...value, id: key };
+                                    });
+                                    renderCategories();
+                                    updateCategoryFilters();
+                                } else {
+                                    console.error("Firebase'de hiçbir kategoriye erişilemedi!");
+                                    alert("Firebase veritabanında kategori bulunamadı. Lütfen tarayıcı konsolunu kontrol edin (F12).");
+                                }
+                            })
+                            .catch(catError => {
+                                console.error("Categories path hatası:", catError);
+                                alert("Firebase bağlantı hatası: " + catError.message);
+                            });
+                    }
+                    
+                    if (allData && allData.resources) {
+                        console.log("Kaynaklar bulundu:", Object.keys(allData.resources).length);
+                        resources = Object.entries(allData.resources).map(([key, value]) => {
+                            return { ...value, id: key };
+                        });
+                        renderResources();
+                    } else {
+                        // Kök dizinde resources yoksa, düz resources path'ini dene
+                        db.ref("resources").once("value")
+                            .then(resSnapshot => {
+                                const resData = resSnapshot.val();
+                                console.log("Doğrudan resources yolundan veri:", resData);
+                                if (resData) {
+                                    resources = Object.entries(resData).map(([key, value]) => {
+                                        return { ...value, id: key };
+                                    });
+                                    renderResources();
+                                } else {
+                                    console.error("Firebase'de hiçbir kaynağa erişilemedi!");
+                                }
+                            })
+                            .catch(resError => {
+                                console.error("Resources path hatası:", resError);
+                            });
+                    }
+                })
+                .catch((error) => {
+                    console.error("Firebase erişim hatası:", error);
+                    alert("Firebase bağlantı hatası: " + error.message);
                 });
-                renderCategories();
-                updateCategoryFilters();
-            } else {
-                console.error("Firebase'de categories yolu bulunamadı!");
-            }
-            
-            if (allData && allData.resources) {
-                console.log("Kaynaklar bulundu:", Object.keys(allData.resources).length);
-                resources = Object.entries(allData.resources).map(([key, value]) => {
-                    return { ...value, id: key };
-                });
-                renderResources();
-            } else {
-                console.error("Firebase'de resources yolu bulunamadı!");
-            }
-        });
+        } catch (e) {
+            console.error("Debug fonksiyonu çalıştırma hatası:", e);
+            alert("Firebase bağlantı hatası: " + e.message);
+        }
+    } else {
+        console.error("Firebase başlatılmamış!");
+        alert("Firebase başlatılamadı. Lütfen internet bağlantınızı kontrol edin ve sayfayı yenileyin.");
     }
 }
