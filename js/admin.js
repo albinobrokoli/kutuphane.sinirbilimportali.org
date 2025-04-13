@@ -87,6 +87,22 @@ document.addEventListener('DOMContentLoaded', function() {
         parseBulkBtn.addEventListener('click', parseBulkResources);
     }
     
+    // Toplu kaynakları kaydet butonu
+    const saveBulkResourcesBtn = document.getElementById('save-bulk-resources-btn');
+    if (saveBulkResourcesBtn) {
+        saveBulkResourcesBtn.addEventListener('click', function() {
+            if (bulkResources.length > 0) {
+                // Submit the resource form to save bulk resources
+                document.getElementById('resource-form').dispatchEvent(new Event('submit'));
+                
+                // Clear the bulk resources text area and preview
+                document.getElementById('bulk-resources-text').value = '';
+                document.getElementById('bulk-resources-preview').innerHTML = '';
+                this.style.display = 'none';
+            }
+        });
+    }
+    
     // Kategori form olayları
     const categoryForm = document.getElementById('category-form');
     if (categoryForm) {
@@ -118,11 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData();
     }
 });
-
-// Helper function to close any modal
-function closeModal(modal) {
-    modal.style.display = 'none';
-}
 
 /**
  * Initialize the admin application
@@ -629,12 +640,36 @@ function saveResources() {
     
     // Save to Firebase if available
     if (firebaseInitialized) {
-        // Önceden kaldırma yerine doğrudan güncelleme yapalım
-        resources.forEach(resource => {
-            const { id, ...resourceData } = resource;
-            db.ref(`resources/${id}`).set(resourceData);
-        });
-        console.log("Kaynaklar Firebase'e kaydedildi");
+        try {
+            // First, get all existing resource IDs from Firebase
+            db.ref('resources').once('value')
+                .then(snapshot => {
+                    const existingData = snapshot.val() || {};
+                    const existingIds = Object.keys(existingData);
+                    const currentIds = resources.map(r => r.id);
+                    
+                    // Find resources that should be removed (exist in Firebase but not in current resources)
+                    const idsToRemove = existingIds.filter(id => !currentIds.includes(id));
+                    
+                    // Remove resources that are no longer in the current list
+                    idsToRemove.forEach(id => {
+                        db.ref(`resources/${id}`).remove();
+                    });
+                    
+                    // Update all current resources
+                    resources.forEach(resource => {
+                        const { id, ...resourceData } = resource;
+                        db.ref(`resources/${id}`).set(resourceData);
+                    });
+                    
+                    console.log(`Kaynaklar Firebase'e kaydedildi. ${resources.length} kaynak güncellendi, ${idsToRemove.length} kaynak kaldırıldı.`);
+                })
+                .catch(error => {
+                    console.error('Firebase kaynak kaydetme hatası:', error);
+                });
+        } catch (error) {
+            console.error('Firebase kaynak kaydetme işlemi sırasında hata:', error);
+        }
     }
 }
 
@@ -880,56 +915,126 @@ function closeCategoryModal() {
  */
 function openResourceModal(resource = null) {
     const modal = document.getElementById('resource-modal');
-    if (!modal) {
-        console.error("resource-modal ID'li element bulunamadı!");
-        return;
+    const form = document.getElementById('resource-form');
+    const titleElement = document.getElementById('resource-modal-title');
+    
+    // Clear previous form data
+    form.reset();
+    
+    // Reset URL fields
+    const urlContainer = document.querySelector('.url-container');
+    if (urlContainer) {
+        // Keep only the first URL field
+        while (urlContainer.children.length > 1) {
+            urlContainer.removeChild(urlContainer.lastChild);
+        }
+        // Clear the first URL field value
+        const firstUrlField = urlContainer.querySelector('.resource-url');
+        if (firstUrlField) {
+            firstUrlField.value = '';
+        }
     }
     
-    const modalTitle = document.getElementById('resource-modal-title');
-    const resourceForm = document.getElementById('resource-form');
-    const resourceId = document.getElementById('resource-id');
-    const resourceCategory = document.getElementById('resource-category');
-    const resourceAuthors = document.getElementById('resource-authors');
-    const resourceYear = document.getElementById('resource-year');
-    const resourceTitle = document.getElementById('resource-title');
-    const resourceJournal = document.getElementById('resource-journal');
-    const resourceUrl = document.getElementById('resource-url');
-    const resourceNotes = document.getElementById('resource-notes');
+    // Setup URL add button
+    const addUrlButtons = document.querySelectorAll('.add-url-btn');
+    addUrlButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const urlRow = document.createElement('div');
+            urlRow.className = 'url-row';
+            urlRow.innerHTML = `
+                <input type="url" class="resource-url">
+                <button type="button" class="remove-url-btn">-</button>
+            `;
+            urlContainer.appendChild(urlRow);
+            
+            // Add event listener to the new remove button
+            const removeBtn = urlRow.querySelector('.remove-url-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    urlRow.remove();
+                });
+            }
+        });
+    });
     
-    // Kategorileri güncelle
-    if (resourceCategory) {
-        resourceCategory.innerHTML = '';
+    // Load categories into dropdown
+    const categorySelect = document.getElementById('resource-category');
+    categorySelect.innerHTML = '';
+    
+    if (categories.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Önce kategori ekleyin';
+        categorySelect.appendChild(option);
+    } else {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Kategori seçin';
+        categorySelect.appendChild(defaultOption);
+        
         categories.forEach(category => {
             const option = document.createElement('option');
             option.value = category.id;
             option.textContent = category.title;
-            resourceCategory.appendChild(option);
+            categorySelect.appendChild(option);
         });
-    } else {
-        console.error("resource-category ID'li element bulunamadı!");
     }
     
+    // Set current year as default for new resources
+    const yearInput = document.getElementById('resource-year');
+    if (yearInput && !yearInput.value) {
+        yearInput.value = new Date().getFullYear();
+    }
+    
+    // If editing existing resource
     if (resource) {
-        // Edit mode
-        modalTitle.textContent = 'Kaynak Düzenle';
-        resourceId.value = resource.id;
-        resourceCategory.value = resource.categoryId;
-        resourceAuthors.value = resource.authors;
-        resourceYear.value = resource.year;
-        resourceTitle.value = resource.title;
-        resourceJournal.value = resource.journal || '';
-        resourceUrl.value = resource.url;
-        resourceNotes.value = resource.notes || '';
-    } else {
-        // Add mode
-        modalTitle.textContent = 'Yeni Kaynak Ekle';
-        resourceForm.reset();
-        resourceId.value = '';
+        titleElement.textContent = 'Kaynağı Düzenle';
         
-        // Günün tarihini varsayılan olarak ayarla
-        resourceYear.value = new Date().getFullYear();
+        // Fill form with resource data
+        document.getElementById('resource-id').value = resource.id;
+        document.getElementById('resource-category').value = resource.categoryId;
+        document.getElementById('resource-authors').value = resource.authors || '';
+        document.getElementById('resource-year').value = resource.year || '';
+        document.getElementById('resource-title').value = resource.title || '';
+        document.getElementById('resource-journal').value = resource.journal || '';
+        document.getElementById('resource-notes').value = resource.notes || '';
+        
+        // Handle URLs
+        if (resource.urls && resource.urls.length > 0) {
+            // Set the first URL
+            const firstUrlField = document.querySelector('.resource-url');
+            if (firstUrlField) {
+                firstUrlField.value = resource.urls[0];
+            }
+            
+            // Add additional URL fields for each extra URL
+            for (let i = 1; i < resource.urls.length; i++) {
+                const urlRow = document.createElement('div');
+                urlRow.className = 'url-row';
+                urlRow.innerHTML = `
+                    <input type="url" class="resource-url" value="${resource.urls[i]}">
+                    <button type="button" class="remove-url-btn">-</button>
+                `;
+                urlContainer.appendChild(urlRow);
+                
+                // Add event listener to the new remove button
+                const removeBtn = urlRow.querySelector('.remove-url-btn');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', function() {
+                        urlRow.remove();
+                    });
+                }
+            }
+        }
+    } else {
+        titleElement.textContent = 'Yeni Kaynak Ekle';
+        document.getElementById('resource-id').value = '';
     }
     
+    // Attach form submit handler
+    form.onsubmit = handleResourceSave;
+    
+    // Show modal
     modal.style.display = 'block';
 }
 
@@ -1013,10 +1118,27 @@ function handleResourceSave(event) {
     
     // Check if we have bulk resources to save
     if (bulkResources.length > 0) {
-        // Generate IDs for each bulk resource
+        // Generate IDs for each bulk resource and ensure they have the correct format
         bulkResources.forEach(resource => {
-            resource.id = 'resource_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            resources.push(resource);
+            const newId = 'resource_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            // Convert single URL to array if needed
+            const urls = resource.url ? [resource.url] : (resource.urls || []);
+            delete resource.url; // Remove single url property if it exists
+            
+            // Create properly formatted resource
+            const formattedResource = {
+                id: newId,
+                categoryId: resource.categoryId,
+                authors: resource.authors || '',
+                year: resource.year || new Date().getFullYear(),
+                title: resource.title || '',
+                journal: resource.journal || '',
+                volume: resource.volume || '',
+                pages: resource.pages || '',
+                urls: urls
+            };
+            
+            resources.push(formattedResource);
         });
         
         alert(`${bulkResources.length} kaynak başarıyla eklendi.`);
@@ -1034,19 +1156,19 @@ function handleResourceSave(event) {
         const urlInputs = document.querySelectorAll('.resource-url');
         const urls = Array.from(urlInputs).map(input => input.value).filter(url => url.trim() !== '');
         
-        if (!resourceAuthors || !resourceYear || !resourceTitle || !resourceJournal || urls.length === 0) {
-            alert('Lütfen tüm zorunlu alanları doldurun ve en az bir URL ekleyin!');
+        if (urls.length === 0) {
+            alert('Lütfen en az bir URL ekleyin!');
             return;
         }
         
         const resourceData = {
             categoryId: resourceCategory,
-            authors: resourceAuthors,
-            year: parseInt(resourceYear),
-            title: resourceTitle,
-            journal: resourceJournal,
-            volume: resourceVolume,
-            pages: resourcePages,
+            authors: resourceAuthors || '',
+            year: resourceYear ? parseInt(resourceYear) : new Date().getFullYear(),
+            title: resourceTitle || '',
+            journal: resourceJournal || '',
+            volume: resourceVolume || '',
+            pages: resourcePages || '',
             urls: urls
         };
         
@@ -1435,73 +1557,91 @@ function parseBulkResources() {
             urls.push(urlMatch[0]);
         }
         
-        // Use the whole line as title if no URL is found
-        if (urls.length > 0) {
-            const citation = line.replace(urlRegex, '').trim();
+        // Skip lines without URLs
+        if (urls.length === 0) {
+            return;
+        }
+        
+        // Use the whole line as title if no structured information is found
+        const citation = line.replace(urlRegex, '').trim();
+        
+        // Basic parsing of citation text
+        let authors = '';
+        let year = '';
+        let title = '';
+        let journal = '';
+        
+        // Try to extract year from citation
+        const yearMatch = citation.match(/\((\d{4})\)/);
+        if (yearMatch) {
+            year = yearMatch[1];
             
-            // Basic parsing of citation text
-            let authors = '';
-            let year = '';
-            let title = '';
-            let journal = '';
-            
-            // Try to extract year from citation
-            const yearMatch = citation.match(/\((\d{4})\)/);
-            if (yearMatch) {
-                year = yearMatch[1];
+            // Try to split authors and title based on year
+            const parts = citation.split(/\(\d{4}\)/);
+            if (parts.length > 0) {
+                authors = parts[0].trim();
                 
-                // Try to split authors and title based on year
-                const parts = citation.split(/\(\d{4}\)/);
-                if (parts.length > 0) {
-                    authors = parts[0].trim();
-                    
-                    if (parts.length > 1) {
-                        // Try to split title and journal
-                        const titleParts = parts[1].split(/\.(?=[^.]*$)/);
-                        if (titleParts.length > 0) {
-                            title = titleParts[0].trim().replace(/^\./, '').trim();
-                            
-                            if (titleParts.length > 1) {
-                                journal = titleParts[1].trim();
-                            }
+                if (parts.length > 1) {
+                    // Try to split title and journal
+                    const titleParts = parts[1].split(/\.(?=[^.]*$)/);
+                    if (titleParts.length > 0) {
+                        title = titleParts[0].trim().replace(/^\./, '').trim();
+                        
+                        if (titleParts.length > 1) {
+                            journal = titleParts[1].trim();
                         }
                     }
                 }
-            } else {
-                // If no year found, use the whole citation as title
-                title = citation;
             }
-            
-            bulkResources.push({
-                categoryId: categoryId,
-                authors: authors || 'Belirtilmemiş',
-                year: year ? parseInt(year) : new Date().getFullYear(),
-                title: title || 'Başlıksız Kaynak',
-                journal: journal || '',
-                url: urls[0] // İlk URL'i kaydet
-            });
+        } else {
+            // If no year found, use the whole citation as title
+            title = citation;
         }
+        
+        bulkResources.push({
+            categoryId: categoryId,
+            authors: authors || '',
+            year: year ? parseInt(year) : new Date().getFullYear(),
+            title: title || '',
+            journal: journal || '',
+            volume: '',
+            pages: '',
+            urls: urls // Store as an array of URLs
+        });
     });
     
     const parsedCount = bulkResources.length;
     if (parsedCount > 0) {
-        alert(`${parsedCount} kaynak başarıyla analiz edildi. Kaynaklar listeye eklenecek.`);
+        alert(`${parsedCount} kaynak başarıyla analiz edildi. Kaynakları kaydetmek için 'Kaydet' butonuna tıklayın.`);
         
-        // Kaynakları veritabanına ekle
-        bulkResources.forEach(resource => {
-            const resourceId = generateUniqueId();
-            resources.push({
-                id: resourceId,
-                ...resource
+        // Display preview of parsed resources
+        const previewContainer = document.getElementById('bulk-resources-preview');
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            const previewTitle = document.createElement('h4');
+            previewTitle.textContent = `Analiz Edilen Kaynaklar (${parsedCount})`;
+            previewContainer.appendChild(previewTitle);
+            
+            const previewList = document.createElement('ul');
+            previewList.className = 'bulk-preview-list';
+            
+            bulkResources.forEach((resource, index) => {
+                const item = document.createElement('li');
+                item.innerHTML = `
+                    <strong>${index + 1}. ${resource.title || 'Başlıksız'}</strong>
+                    <div><small>${resource.urls.length} URL(s)</small></div>
+                `;
+                previewList.appendChild(item);
             });
-        });
-        
-        // Kaynakları kaydet ve UI'ı güncelle
-        saveResources();
-        renderResources();
-        
-        // Alanı temizle
-        document.getElementById('bulk-resources-text').value = '';
+            
+            previewContainer.appendChild(previewList);
+            
+            // Show the save button
+            const saveBtn = document.getElementById('save-bulk-resources-btn');
+            if (saveBtn) {
+                saveBtn.style.display = 'block';
+            }
+        }
     } else {
         alert('Hiç kaynak bulunamadı. Metinde URL\'ler olduğundan emin olun.');
     }
