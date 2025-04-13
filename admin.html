@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - kutuphane.sinirbilimportali.org</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Lato:wght@300;400;700&display=swap">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Login Section -->
+        <div id="login-section" class="admin-section">
+            <div class="admin-card">
+                <h1 class="admin-title">Admin Girişi</h1>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adı</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Şifre</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn primary-btn">Giriş</button>
+                </form>
+                <div id="login-error" class="error-message"></div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard Section -->
+        <div id="dashboard-section" class="admin-section hidden">
+            <header class="admin-header">
+                <h1>kutuphane.sinirbilimportali.org Admin Paneli</h1>
+                <button id="logout-btn" class="btn">Çıkış</button>
+            </header>
+
+            <div class="dashboard-tabs">
+                <button class="tab-btn active" data-tab="categories">Kategoriler</button>
+                <button class="tab-btn" data-tab="resources">Kaynaklar</button>
+                <button class="tab-btn" data-tab="export">Dışa Aktar</button>
+            </div>
+
+            <!-- Categories Tab -->
+            <div id="categories-tab" class="tab-content">
+                <div class="action-bar">
+                    <h2>Kategoriler</h2>
+                    <button id="add-category-btn" class="btn primary-btn">Yeni Kategori Ekle</button>
+                </div>
+                
+                <div class="categories-list" id="categories-list">
+                    <!-- Categories will be loaded here dynamically -->
+                </div>
+                
+                <!-- Add/Edit Category Modal -->
+                <div id="category-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal">&times;</span>
+                        <h2 id="category-modal-title">Kategori Ekle</h2>
+                        <form id="category-form">
+                            <input type="hidden" id="category-id">
+                            <div class="form-group">
+                                <label for="category-title">Kategori Başlığı</label>
+                                <input type="text" id="category-title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="category-slug">Kategori ID (URL için)</label>
+                                <input type="text" id="category-slug" required>
+                                <small>Sadece küçük harfler, rakamlar ve tire kullanın (örn: "norofizyoloji")</small>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn primary-btn">Kaydet</button>
+                                <button type="button" class="btn" id="cancel-category">İptal</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Delete Confirmation Modal -->
+                <div id="delete-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-delete-modal">&times;</span>
+                        <h2>Silme Onayı</h2>
+                        <p id="delete-message"></p>
+                        <div class="form-group">
+                            <button id="confirm-delete" class="btn danger-btn">Sil</button>
+                            <button id="cancel-delete" class="btn">İptal</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources Tab -->
+            <div id="resources-tab" class="tab-content hidden">
+                <div class="action-bar">
+                    <div class="resource-header">
+                        <h2>Kaynaklar</h2>
+                        <select id="resource-category-filter">
+                            <option value="">Tüm Kategoriler</option>
+                            <!-- Categories will be loaded here dynamically -->
+                        </select>
+                    </div>
+                    <button id="add-resource-btn" class="btn primary-btn">Yeni Kaynak Ekle</button>
+                </div>
+                
+                <div class="resources-list" id="resources-list">
+                    <!-- Resources will be loaded here dynamically -->
+                </div>
+                
+                <!-- Add/Edit Resource Modal -->
+                <div id="resource-modal" class="modal">
+                    <div class="modal-content resource-modal-content">
+                        <span class="close-resource-modal">&times;</span>
+                        <h2 id="resource-modal-title">Kaynak Ekle</h2>
+                        <form id="resource-form">
+                            <input type="hidden" id="resource-id">
+                            <div class="form-group">
+                                <label for="resource-category">Kategori</label>
+                                <select id="resource-category" required>
+                                    <!-- Categories will be loaded here dynamically -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="bulk-resources">Toplu Kaynak Ekleme</label>
+                                <textarea id="bulk-resources" rows="10" placeholder="Her satıra bir kaynak olacak şekilde kaynakları yapıştırın. Format: Yazar(lar), Yıl, Başlık, Dergi/Kaynak, Cilt(Sayı), Sayfa Numaraları, URL"></textarea>
+                                <small>Toplu kaynak ekliyorsanız aşağıdaki tekil kaynak alanlarını boş bırakabilirsiniz.</small>
+                                <button type="button" id="parse-bulk-btn" class="btn">Toplu Kaynakları Analiz Et</button>
+                            </div>
+                            <div id="single-resource-fields">
+                                <div class="form-group">
+                                    <label for="resource-authors">Yazar(lar)</label>
+                                    <input type="text" id="resource-authors">
+                                    <small>Örn: "Smith, J., & Johnson, M."</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="resource-year">Yıl</label>
+                                    <input type="number" id="resource-year" min="1800" max="2100">
+                                </div>
+                                <div class="form-group">
+                                    <label for="resource-title">Başlık</label>
+                                    <input type="text" id="resource-title">
+                                </div>
+                                <div class="form-group">
+                                    <label for="resource-journal">Dergi/Kitap/Kaynak</label>
+                                    <input type="text" id="resource-journal">
+                                </div>
+                                <div class="form-group">
+                                    <label for="resource-volume">Cilt(Sayı)</label>
+                                    <input type="text" id="resource-volume">
+                                    <small>Örn: "15(2)" veya kitaplar için boş bırakılabilir</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="resource-pages">Sayfa Numaraları</label>
+                                    <input type="text" id="resource-pages">
+                                    <small>Örn: "112-130" veya web kaynakları için boş bırakılabilir</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>URL'ler</label>
+                                    <div id="url-container">
+                                        <div class="url-entry">
+                                            <div class="url-input-group">
+                                                <input type="url" class="resource-url" placeholder="https://...">
+                                                <button type="button" class="btn add-url-btn">+</button>
+                                            </div>
+                                            <small>Kaynağın tam URL adresi, https:// ile başlamalı</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn primary-btn">Kaydet</button>
+                                <button type="button" class="btn" id="cancel-resource">İptal</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div id="export-tab" class="tab-content hidden">
+                <div class="action-bar">
+                    <h2>Veri Yönetimi</h2>
+                </div>
+                
+                <div class="export-options">
+                    <div class="export-card">
+                        <h3>HTML'e Dönüştür</h3>
+                        <p>Tüm kategorileri ve kaynakları library.html için HTML koduna dönüştürür.</p>
+                        <button id="generate-html-btn" class="btn primary-btn">HTML Oluştur</button>
+                    </div>
+                    
+                    <div class="export-card">
+                        <h3>Verileri İndir</h3>
+                        <p>Tüm verileri JSON formatında bilgisayarınıza indirin.</p>
+                        <button id="download-json-btn" class="btn">JSON İndir</button>
+                    </div>
+                    
+                    <div class="export-card">
+                        <h3>Veri Yükle</h3>
+                        <p>Daha önceden indirdiğiniz JSON verisini yükleyin.</p>
+                        <input type="file" id="json-file-input" accept=".json">
+                        <button id="upload-json-btn" class="btn">JSON Yükle</button>
+                    </div>
+                </div>
+                
+                <div class="generated-code-container hidden" id="generated-code-container">
+                    <h3>Oluşturulan HTML Kodu</h3>
+                    <p>Bu kodu library.html dosyasında &lt;!-- Categories will be created with accordion functionality --&gt; ile &lt;!-- End of categories --&gt; yorumları arasına yerleştirin:</p>
+                    <div class="code-actions">
+                        <button id="copy-html-btn" class="btn">Kopyala</button>
+                    </div>
+                    <pre id="generated-html-code" class="code-block"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+    
+    <script src="js/admin.js"></script>
+</body>
+</html>
