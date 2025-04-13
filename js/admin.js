@@ -321,67 +321,40 @@ function loadData() {
         console.log("Firebase'den veri yükleniyor...");
         
         // Kategorileri yükle
-        db.ref("categories").once("value")
-            .then((snapshot) => {
-                const fbCategories = snapshot.val();
-                if (fbCategories) {
-                    categories = Object.entries(fbCategories).map(([key, value]) => {
-                        return { ...value, id: key };
-                    });
-                    console.log("Firebase'den kategoriler yüklendi:", categories);
-                    renderCategories();
-                } else {
-                    // Firebase'de veri yoksa localStorage'dan yükle
-                    loadFromLocalStorage();
-                    // Ve yüklenen verileri Firebase'e aktar
-                    if (categories.length > 0) {
-                        categories.forEach(category => {
-                            const { id, ...categoryData } = category;
-                            db.ref(`categories/${id}`).set(categoryData);
-                        });
-                    }
-                }
+        db.ref("categories").on("value", (snapshot) => {
+            const fbCategories = snapshot.val();
+            if (fbCategories) {
+                categories = Object.entries(fbCategories).map(([key, value]) => {
+                    return { ...value, id: key };
+                });
+                console.log("Firebase'den kategoriler yüklendi:", categories);
+                renderCategories();
                 updateCategoryFilters();
-            })
-            .catch((error) => {
-                console.error("Firebase kategori yükleme hatası:", error);
+            } else {
+                console.log("Firebase'de hiç kategori bulunamadı");
+                // Firebase'de veri yoksa localStorage'dan yükle
                 loadFromLocalStorage();
-            });
+            }
+        });
             
         // Kaynakları yükle
-        db.ref("resources").once("value")
-            .then((snapshot) => {
-                const fbResources = snapshot.val();
-                if (fbResources) {
-                    resources = Object.entries(fbResources).map(([key, value]) => {
-                        return { ...value, id: key };
-                    });
-                    console.log("Firebase'den kaynaklar yüklendi:", resources);
-                    renderResources();
-                } else {
-                    // Firebase'de veri yoksa localStorage'dan yükle (kategoriler zaten yüklendi)
-                    const storedResources = localStorage.getItem('sinirbilimportali_resources');
-                    if (storedResources) {
-                        resources = JSON.parse(storedResources);
-                        
-                        // Ve yüklenen verileri Firebase'e aktar
-                        if (resources.length > 0) {
-                            resources.forEach(resource => {
-                                const { id, ...resourceData } = resource;
-                                db.ref(`resources/${id}`).set(resourceData);
-                            });
-                        }
-                    }
-                }
-            })
-            .catch((error) => {
-                console.error("Firebase kaynak yükleme hatası:", error);
-                // localStorage'dan yükle (kategoriler zaten yüklendi)
+        db.ref("resources").on("value", (snapshot) => {
+            const fbResources = snapshot.val();
+            if (fbResources) {
+                resources = Object.entries(fbResources).map(([key, value]) => {
+                    return { ...value, id: key };
+                });
+                console.log("Firebase'den kaynaklar yüklendi:", resources.length + " kaynak var");
+                renderResources();
+            } else {
+                console.log("Firebase'de hiç kaynak bulunamadı");
+                // Firebase'de veri yoksa localStorage'dan yükle (kategoriler zaten yüklendi)
                 const storedResources = localStorage.getItem('sinirbilimportali_resources');
                 if (storedResources) {
                     resources = JSON.parse(storedResources);
                 }
-            });
+            }
+        });
     } else {
         // Firebase başlatılamadıysa localStorage'dan yükle
         loadFromLocalStorage();
