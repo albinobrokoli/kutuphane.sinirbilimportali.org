@@ -220,6 +220,64 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
+    <!-- Doğrudan Firebase Erişimi -->
+    <script>
+        // Firebase yapılandırması
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWCI8GDMCDeknLgKJidhBp2f86OHgZsYU",
+            authDomain: "sinirbilimportali-kaynaklar.firebaseapp.com",
+            databaseURL: "https://sinirbilimportali-kaynaklar-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "sinirbilimportali-kaynaklar",
+            storageBucket: "sinirbilimportali-kaynaklar.firebasestorage.app",
+            messagingSenderId: "750308737969",
+            appId: "1:750308737969:web:788597d7c7fba399527390"
+        };
+
+        // Firebase'i doğrudan başlat
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        // Global olarak kategorileri ve kaynakları sakla
+        window.categories = [];
+        window.resources = [];
+        
+        // Firebase'den verileri yükle
+        function loadFromFirebase() {
+            console.log("Kategoriler doğrudan Firebase'den yükleniyor...");
+            
+            // Kategorileri yükle
+            db.ref("categories").on("value", function(snapshot) {
+                const data = snapshot.val();
+                if (data) {
+                    window.categories = Object.entries(data).map(([key, value]) => {
+                        return { ...value, id: key };
+                    });
+                    console.log("Kategoriler yüklendi:", window.categories.length);
+                } else {
+                    console.log("Kategoriler bulunamadı");
+                }
+            });
+            
+            // Kaynakları yükle
+            db.ref("resources").on("value", function(snapshot) {
+                const data = snapshot.val();
+                if (data) {
+                    window.resources = Object.entries(data).map(([key, value]) => {
+                        return { ...value, id: key };
+                    });
+                    console.log("Kaynaklar yüklendi:", window.resources.length);
+                } else {
+                    console.log("Kaynaklar bulunamadı");
+                }
+            });
+        }
+        
+        // Sayfa yüklendiğinde verileri yükle
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFromFirebase();
+        });
+    </script>
+    
     <script src="js/admin.js"></script>
 </body>
 </html>
