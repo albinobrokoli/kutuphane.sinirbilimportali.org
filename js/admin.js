@@ -18,11 +18,40 @@ const firebaseConfig = {
 let firebaseInitialized = false;
 let db;
 
+// Yerel geliştirme veya dosya sistemi üzerinden çalışırken veri yedekleme
+let localCategories = [];
+let localResources = [];
+
 try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-    firebaseInitialized = true;
-    console.log("Firebase başarıyla başlatıldı.");
+    // Check if running from file:// protocol
+    const isLocalFile = window.location.protocol === 'file:';
+    
+    if (isLocalFile) {
+        console.warn("Admin paneli dosya sisteminden (file://) çalıştırılıyor. Firebase güvenlik nedeniyle çalışmayacak.");
+        console.warn("Lütfen admin paneline şu adres üzerinden erişin: https://kutuphane.sinirbilimportali.org/admin.html");
+        
+        // Yerel veri yükleme
+        const storedCategories = localStorage.getItem('sinirbilimportali_categories');
+        if (storedCategories) {
+            localCategories = JSON.parse(storedCategories);
+        }
+        
+        const storedResources = localStorage.getItem('sinirbilimportali_resources');
+        if (storedResources) {
+            localResources = JSON.parse(storedResources);
+        }
+        
+        // Dosya sisteminden çalışırken bildirim göster
+        setTimeout(() => {
+            alert("Admin paneli dosya sisteminden açılmış. Firebase bağlantısı çalışmayacak.\n\nLütfen admin paneline şu adresten erişin:\nhttps://kutuphane.sinirbilimportali.org/admin.html");
+        }, 1000);
+    } else {
+        // Normal Firebase başlatma (http veya https protokolü)
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        firebaseInitialized = true;
+        console.log("Firebase başarıyla başlatıldı.");
+    }
 } catch (error) {
     console.error("Firebase başlatılamadı:", error);
 }
@@ -332,6 +361,17 @@ function switchTab(tabId) {
  * Load data from localStorage or Firebase
  */
 function loadData() {
+    // Dosya sisteminden çalışırken yerel verileri kullan
+    if (window.location.protocol === 'file:') {
+        console.log("Dosya sisteminden çalışıyor, yerel verileri kullanıyorum...");
+        categories = localCategories;
+        resources = localResources;
+        renderCategories();
+        renderResources();
+        updateCategoryFilters();
+        return;
+    }
+
     if (firebaseInitialized) {
         // Firebase'den verileri yükle
         console.log("Firebase'den veri yükleniyor...");
