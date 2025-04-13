@@ -124,6 +124,91 @@
         </div>
     </div>
 
+    <!-- Modals -->
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="category-modal-title">Yeni Kategori Ekle</h2>
+            <form id="category-form">
+                <div class="form-group">
+                    <label for="category-title">Kategori Başlığı</label>
+                    <input type="text" id="category-title" required>
+                </div>
+                <input type="hidden" id="category-id">
+                <button type="submit" class="btn primary-btn">Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resource Modal -->
+    <div id="resource-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="resource-modal-title">Yeni Kaynak Ekle</h2>
+            <form id="resource-form">
+                <div class="form-group">
+                    <label for="resource-category">Kategori</label>
+                    <select id="resource-category" required>
+                        <!-- Category options will be added here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="resource-authors">Yazar(lar)</label>
+                    <input type="text" id="resource-authors" required>
+                </div>
+                <div class="form-group">
+                    <label for="resource-year">Yıl</label>
+                    <input type="number" id="resource-year" required>
+                </div>
+                <div class="form-group">
+                    <label for="resource-title">Başlık</label>
+                    <input type="text" id="resource-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="resource-journal">Dergi/Yayıncı</label>
+                    <input type="text" id="resource-journal">
+                </div>
+                <div class="form-group">
+                    <label for="resource-url">URL</label>
+                    <input type="url" id="resource-url" required>
+                </div>
+                <div class="form-group">
+                    <label for="resource-notes">Notlar (İsteğe Bağlı)</label>
+                    <textarea id="resource-notes" rows="3"></textarea>
+                </div>
+                <input type="hidden" id="resource-id">
+                <button type="submit" class="btn primary-btn">Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Silme Onayı</h2>
+            <p id="delete-message"></p>
+            <div class="modal-actions">
+                <button id="confirm-delete-btn" class="btn danger-btn">Sil</button>
+                <button id="cancel-delete-btn" class="btn">İptal</button>
+            </div>
+            <input type="hidden" id="delete-type">
+            <input type="hidden" id="delete-id">
+        </div>
+    </div>
+
+    <!-- Debug Modal -->
+    <div id="debug-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Debug Bilgileri</h2>
+            <div class="debug-info">
+                <pre id="debug-output"></pre>
+            </div>
+        </div>
+    </div>
+
     <script src="js/admin.js"></script>
 </body>
 </html>
