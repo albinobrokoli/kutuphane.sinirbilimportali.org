@@ -51,8 +51,24 @@ function initializeApp() {
     // Initialize UI elements
     initializeUI();
     
+    // Test Firebase connection and debug data
+    setTimeout(() => {
+        debugFirebaseData();
+    }, 1000);
+    
     // Load data from localStorage or Firebase
     loadData();
+    
+    // Add a Debug button to admin interface
+    const adminHeader = document.querySelector('.admin-header');
+    if (adminHeader) {
+        const debugBtn = document.createElement('button');
+        debugBtn.textContent = 'Firebase Veritabanını Kontrol Et';
+        debugBtn.className = 'btn debug-btn';
+        debugBtn.style.marginRight = '10px';
+        debugBtn.addEventListener('click', debugFirebaseData);
+        adminHeader.appendChild(debugBtn);
+    }
 }
 
 /**
@@ -1331,5 +1347,41 @@ function parseBulkResources() {
         }
     } else {
         alert('Hiç kaynak bulunamadı. Metinde URL\\\'ler olduğundan emin olun.');
+    }
+}
+
+/**
+ * Verify and log Firebase data
+ */
+function debugFirebaseData() {
+    if (firebaseInitialized) {
+        console.log("Firebase bağlantısı aktif, veritabanını kontrol ediyorum...");
+        
+        // Tüm veri yollarını kontrol et
+        db.ref().once("value", (snapshot) => {
+            const allData = snapshot.val();
+            console.log("Firebase'deki tüm veriler:", allData);
+            
+            if (allData && allData.categories) {
+                console.log("Kategoriler bulundu:", Object.keys(allData.categories).length);
+                categories = Object.entries(allData.categories).map(([key, value]) => {
+                    return { ...value, id: key };
+                });
+                renderCategories();
+                updateCategoryFilters();
+            } else {
+                console.error("Firebase'de categories yolu bulunamadı!");
+            }
+            
+            if (allData && allData.resources) {
+                console.log("Kaynaklar bulundu:", Object.keys(allData.resources).length);
+                resources = Object.entries(allData.resources).map(([key, value]) => {
+                    return { ...value, id: key };
+                });
+                renderResources();
+            } else {
+                console.error("Firebase'de resources yolu bulunamadı!");
+            }
+        });
     }
 }
