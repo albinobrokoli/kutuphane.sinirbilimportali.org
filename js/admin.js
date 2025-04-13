@@ -80,23 +80,57 @@ function initializeApp() {
     // Initialize UI elements
     initializeUI();
     
-    // Test Firebase connection and debug data
-    setTimeout(() => {
-        debugFirebaseData();
-    }, 1000);
+    // Add a debug button for testing Firebase connection
+    addDebugButton();
     
     // Load data from localStorage or Firebase
     loadData();
-    
-    // Add a Debug button to admin interface
+}
+
+/**
+ * Add a debug button to help troubleshoot Firebase connection
+ */
+function addDebugButton() {
     const adminHeader = document.querySelector('.admin-header');
     if (adminHeader) {
         const debugBtn = document.createElement('button');
-        debugBtn.textContent = 'Firebase Veritabanını Kontrol Et';
-        debugBtn.className = 'btn debug-btn';
+        debugBtn.textContent = 'Firebase Test';
+        debugBtn.className = 'btn';
         debugBtn.style.marginRight = '10px';
-        debugBtn.addEventListener('click', debugFirebaseData);
-        adminHeader.appendChild(debugBtn);
+        debugBtn.addEventListener('click', () => {
+            if (firebaseInitialized) {
+                alert('Firebase bağlantısı aktif! Veritabanını kontrol ediyorum...');
+                testFirebaseConnection();
+            } else {
+                alert('Firebase başlatılamadı! Lütfen konsolu kontrol edin.');
+            }
+        });
+        adminHeader.insertBefore(debugBtn, adminHeader.querySelector('#logout-btn'));
+    }
+}
+
+/**
+ * Test Firebase connection and show results
+ */
+function testFirebaseConnection() {
+    try {
+        db.ref().once('value')
+            .then(snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    console.log('Firebase veritabanı içeriği:', data);
+                    alert(`Firebase veritabanına erişim başarılı!\nKategoriler: ${data.categories ? Object.keys(data.categories).length : 0}\nKaynaklar: ${data.resources ? Object.keys(data.resources).length : 0}`);
+                } else {
+                    alert('Firebase veritabanına erişim başarılı, ancak veri bulunamadı.');
+                }
+            })
+            .catch(error => {
+                console.error('Firebase test hatası:', error);
+                alert('Firebase bağlantı hatası: ' + error.message);
+            });
+    } catch (e) {
+        console.error('Test fonksiyonu hatası:', e);
+        alert('Firebase test fonksiyonu hatası: ' + e.message);
     }
 }
 
