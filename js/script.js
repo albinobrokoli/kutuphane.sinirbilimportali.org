@@ -75,15 +75,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     Object.entries(resources).forEach(([resId, res]) => {
                         const resItem = document.createElement("li");
                         resItem.className = "resource-item";
-                        const citation = `${res.authors} (${res.year}) ${res.title}`;
+                        let citation = '';
+                        
+                        if (res.authors) citation += res.authors + ' ';
+                        if (res.year) citation += `(${res.year}) `;
+                        if (res.title) citation += res.title;
                         
                         resItem.innerHTML = `
                             <a href="#" class="resource-title" onclick="toggleResourceLinks('${resId}'); return false;">${citation}</a>
                             <div id="${resId}" class="resource-links" style="display: none;">
-                                <div class="resource-citation"><em>${res.journal || ''}</em></div>
-                                <ul class="url-list">
-                                    <li><a href="${res.url}" target="_blank">Kaynak</a></li>
-                                </ul>
+                                <div class="resource-citation">
+                                    ${res.journal ? `<em>${res.journal}</em>` : ''}
+                                </div>
+                                ${res.url ? `<div class="url-list">
+                                    <a href="${res.url}" target="_blank" class="resource-link">Kaynak Bağlantısı</a>
+                                </div>` : ''}
                             </div>
                         `;
                         resList.appendChild(resItem);
