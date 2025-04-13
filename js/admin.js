@@ -418,19 +418,12 @@ function saveCategories() {
     
     // Save to Firebase if available
     if (firebaseInitialized) {
-        // Önce eski verileri temizle
-        db.ref("categories").remove()
-            .then(() => {
-                // Sonra yeni verileri ekle
-                categories.forEach(category => {
-                    const { id, ...categoryData } = category;
-                    db.ref(`categories/${id}`).set(categoryData);
-                });
-                console.log("Kategoriler Firebase'e kaydedildi");
-            })
-            .catch((error) => {
-                console.error("Firebase kategori kaydetme hatası:", error);
-            });
+        // Önceden kaldırma yerine doğrudan güncelleme yapalım
+        categories.forEach(category => {
+            const { id, ...categoryData } = category;
+            db.ref(`categories/${id}`).set(categoryData);
+        });
+        console.log("Kategoriler Firebase'e kaydedildi");
     }
 }
 
@@ -443,19 +436,12 @@ function saveResources() {
     
     // Save to Firebase if available
     if (firebaseInitialized) {
-        // Önce eski verileri temizle
-        db.ref("resources").remove()
-            .then(() => {
-                // Sonra yeni verileri ekle
-                resources.forEach(resource => {
-                    const { id, ...resourceData } = resource;
-                    db.ref(`resources/${id}`).set(resourceData);
-                });
-                console.log("Kaynaklar Firebase'e kaydedildi");
-            })
-            .catch((error) => {
-                console.error("Firebase kaynak kaydetme hatası:", error);
-            });
+        // Önceden kaldırma yerine doğrudan güncelleme yapalım
+        resources.forEach(resource => {
+            const { id, ...resourceData } = resource;
+            db.ref(`resources/${id}`).set(resourceData);
+        });
+        console.log("Kaynaklar Firebase'e kaydedildi");
     }
 }
 
