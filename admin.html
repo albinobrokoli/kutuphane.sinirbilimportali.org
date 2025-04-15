@@ -218,6 +218,25 @@
         </div>
     </div>
 
+    <section id="bulk-add-section">
+        <h2>Toplu Kaynakça Ekle</h2>
+        <p>Her satıra bir kaynakça girin (Örn: Başlık - http://example.com). Kategori otomatik algılanmaya çalışılacaktır veya varsayılan kategoriye eklenecektir.</p>
+        <form id="bulk-bibliography-form">
+            <label for="bulk-bibliography">Kaynakçalar:</label>
+            <textarea id="bulk-bibliography" name="bulk-bibliography" rows="10" required></textarea>
+            <button type="submit">Toplu Ekle</button>
+        </form>
+    </section>
+
+    <hr>
+
+    <section id="bibliography-list-section">
+        <h2>Kaynakçalar</h2>
+        <div id="bibliography-accordion">
+            <!-- Kategoriler ve kaynakçalar buraya JS ile eklenecek -->
+        </div>
+    </section>
+
     <script src="js/admin.js"></script>
 </body>
 </html>
