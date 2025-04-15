@@ -555,6 +555,123 @@ small {
     margin-top: var(--space-md);
 }
 
+/* Toplu Kaynakça Ekleme Stilleri */
+#bulk-add-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #2c2c2c; /* Koyu tema için uygun bir arka plan */
+    border-radius: 8px;
+}
+
+#bulk-add-section h2 {
+    margin-bottom: 1rem;
+    color: #e0e0e0;
+}
+
+#bulk-add-section p {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #b0b0b0;
+}
+
+#bulk-bibliography-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #c0c0c0;
+}
+
+#bulk-bibliography-form textarea {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    font-family: 'Lato', sans-serif;
+    min-height: 150px;
+    box-sizing: border-box; /* İçeriğin padding ve border dahil boyutlandırılmasını sağlar */
+}
+
+#bulk-bibliography-form button {
+    padding: 0.8rem 1.5rem;
+    background-color: #007bff; /* Ana sitedeki buton rengiyle uyumlu olabilir */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#bulk-bibliography-form button:hover {
+    background-color: #0056b3;
+}
+
+/* Kaynakça Listesi (Akordiyon) Stilleri */
+#bibliography-list-section {
+    margin-top: 2rem;
+}
+
+#bibliography-accordion .category-header {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex; /* İkon eklemek için */
+    justify-content: space-between; /* Başlık ve ikonu ayırmak için */
+    align-items: center;
+}
+
+#bibliography-accordion .category-header:hover {
+    background-color: #4a4a4a;
+}
+
+#bibliography-accordion .category-header::after {
+    content: '\25BC'; /* Aşağı ok ikonu */
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+#bibliography-accordion .category-header.active::after {
+    transform: rotate(180deg); /* Yukarı ok */
+}
+
+#bibliography-accordion .bibliography-items {
+    list-style: none;
+    padding: 0.5rem 1rem 1rem 1rem;
+    margin: 0;
+    background-color: #2c2c2c;
+    border-radius: 0 0 4px 4px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Yumuşak açılma efekti */
+}
+
+#bibliography-accordion .bibliography-items.active {
+    max-height: 500px; /* İçeriğe göre ayarlanabilir, animasyon için yeterli büyük bir değer */
+    padding: 1rem; /* Açıkken padding ekle */
+}
+
+#bibliography-accordion .bibliography-items li {
+    margin-bottom: 0.5rem;
+}
+
+#bibliography-accordion .bibliography-items li a {
+    color: #a0cfff; /* Okunabilir bir link rengi */
+    text-decoration: none;
+    transition: color 0.3s ease, transform 0.2s ease-out; /* Renk ve hafif hareket animasyonu */
+    display: inline-block; /* Transform için */
+}
+
+#bibliography-accordion .bibliography-items li a:hover {
+    color: #ffffff; /* Hover rengi */
+    text-decoration: underline;
+    transform: translateY(-2px); /* Hafif yukarı kayma animasyonu */
+}
+
 /* Responsive Styles */
 @media (max-width: 992px) {
     .dashboard-tabs {
