@@ -23,6 +23,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Firebase referansı
     const db = firebase.database();
 
+    // Sekme geçişleri ve çıkış butonu
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab + '-tab';
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(tc => tc.classList.add('hidden'));
+            btn.classList.add('active');
+            const content = document.getElementById(target);
+            if (content) content.classList.remove('hidden');
+        });
+    });
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            dashboardSection.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
+    }
+
     // Kategorileri ve kaynakçaları yükle
     loadCategoriesAndBibliographies();
 
@@ -50,18 +73,49 @@ document.addEventListener('DOMContentLoaded', () => {
         categoryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = categoryTitleInput.value.trim();
-            if (!title) {
-                alert('Kategori başlığı gerekli!');
-                return;
-            }
-            // Kategori yoksa ekle
+            if (!title) { alert('Kategori başlığı gerekli!'); return; }
             const catRef = db.ref('categories');
             let catSnapshot = await catRef.orderByChild('title').equalTo(title).once('value');
             if (!catSnapshot.exists()) {
                 const newCatRef = catRef.push();
-                await newCatRef.set({ title: title });
+                await newCatRef.set({ title });
             }
             categoryModal.style.display = 'none';
+            await loadCategoriesAndBibliographies();
+        });
+    }
+
+    // Resource modal açma/kapatma ve form gönderme
+    const addResourceBtn = document.getElementById('add-resource-btn');
+    const resourceModal = document.getElementById('resource-modal');
+    const resourceForm = document.getElementById('resource-form');
+    const closeResourceModalBtn = resourceModal ? resourceModal.querySelector('.close-btn') : null;
+    if (addResourceBtn && resourceModal) {
+        addResourceBtn.addEventListener('click', () => {
+            resourceForm.reset();
+            resourceModal.style.display = 'block';
+        });
+    }
+    if (closeResourceModalBtn) {
+        closeResourceModalBtn.addEventListener('click', () => {
+            resourceModal.style.display = 'none';
+        });
+    }
+    if (resourceForm) {
+        resourceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const catId = document.getElementById('resource-category').value;
+            if (!catId) { alert('Kategori seçin!'); return; }
+            const urls = Array.from(resourceModal.querySelectorAll('.resource-url')).map(el => el.value.trim()).filter(u => u);
+            if (urls.length === 0) { alert('En az bir URL girin!'); return; }
+            const authors = document.getElementById('resource-authors').value.trim();
+            const year = document.getElementById('resource-year').value.trim();
+            const title = document.getElementById('resource-title').value.trim();
+            const journal = document.getElementById('resource-journal').value.trim();
+            const notes = document.getElementById('resource-notes').value.trim();
+            const resRef = db.ref('resources').push();
+            await resRef.set({ categoryId: catId, authors, year: parseInt(year) || null, title, journal, notes, urls });
+            resourceModal.style.display = 'none';
             await loadCategoriesAndBibliographies();
         });
     }
@@ -146,38 +200,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const catRef = db.ref('categories');
         catRef.once('value').then(snapshot => {
             const categories = snapshot.val() || {};
-            // Kategori seçiciler
-            const dropdownIds = [
-                'resource-category',
-                'bulk-resources-category',
-                'category-filter',
-                'bibliography-category',
-                'bulk-bibliography-category'
-            ];
+            const dropdownIds = ['resource-category','bulk-resources-category','category-filter'];
             dropdownIds.forEach(id => {
                 const select = document.getElementById(id);
                 if (select) {
                     const currentVal = select.value;
                     select.innerHTML = '';
-                    // Varsayılan seçenekler
                     if (id === 'category-filter') {
-                        const opt = document.createElement('option');
-                        opt.value = '';
-                        opt.textContent = 'Tüm Kategoriler';
-                        select.appendChild(opt);
-                    } else if (id === 'bulk-resources-category' || id === 'resource-category') {
-                        const opt = document.createElement('option');
-                        opt.value = '';
-                        opt.textContent = 'Kategori Seçiniz';
-                        select.appendChild(opt);
+                        const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'Tüm Kategoriler'; select.appendChild(opt);
+                    } else {
+                        const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'Kategori Seçiniz'; select.appendChild(opt);
                     }
                     Object.entries(categories).forEach(([catId, catData]) => {
-                        const opt = document.createElement('option');
-                        opt.value = catId;
-                        opt.textContent = catData.title;
-                        select.appendChild(opt);
+                        const opt = document.createElement('option'); opt.value = catId; opt.textContent = catData.title; select.appendChild(opt);
                     });
-                    // Önceki seçim korunmaya çalışılır
                     if (currentVal) select.value = currentVal;
                 }
             });
