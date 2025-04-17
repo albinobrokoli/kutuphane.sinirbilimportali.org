@@ -182,6 +182,25 @@ small {
     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
+.bibliography-items li a {
+    display: block;
+    padding: 0.7em 1.2em;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    background: transparent;
+    transition: background 0.4s cubic-bezier(0.4,0,0.2,1), color 0.3s, box-shadow 0.4s, transform 0.3s;
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+}
+.bibliography-items li a:hover {
+    background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: #fff;
+    box-shadow: 0 2px 18px 0 var(--glow-color-blue);
+    transform: scale(1.04) translateX(6px);
+}
+
+
 .item-title {
     font-size: var(--font-size-md);
     font-weight: 500;
