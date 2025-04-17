@@ -26,45 +26,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // Kategorileri ve kaynakçaları yükle
     loadCategoriesAndBibliographies();
 
-    // Tekli kaynakça ekleme
-    const singleBibliographyForm = document.getElementById('bibliography-form');
-    if (singleBibliographyForm) {
-        singleBibliographyForm.addEventListener('submit', async (e) => {
+    // Kategori ekleme modalı
+    const addCategoryBtn = document.getElementById('add-category-btn');
+    const categoryModal = document.getElementById('category-modal');
+    const categoryForm = document.getElementById('category-form');
+    const categoryTitleInput = document.getElementById('category-title');
+    const categoryIdInput = document.getElementById('category-id');
+    const closeCategoryModalBtn = categoryModal ? categoryModal.querySelector('.close-btn') : null;
+
+    if (addCategoryBtn && categoryModal) {
+        addCategoryBtn.addEventListener('click', () => {
+            categoryTitleInput.value = '';
+            categoryIdInput.value = '';
+            categoryModal.style.display = 'block';
+        });
+    }
+    if (closeCategoryModalBtn && categoryModal) {
+        closeCategoryModalBtn.addEventListener('click', () => {
+            categoryModal.style.display = 'none';
+        });
+    }
+    if (categoryForm) {
+        categoryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const titleInput = document.getElementById('bibliography-title');
-            const urlInput = document.getElementById('bibliography-url');
-            const categoryInput = document.getElementById('bibliography-category');
-            const title = titleInput.value.trim();
-            const url = urlInput.value.trim();
-            const category = categoryInput.value.trim() || 'Diğer';
-            if (title && url) {
-                await addBibliographyFirebase(category, title, url);
-                titleInput.value = '';
-                urlInput.value = '';
-                categoryInput.value = '';
-                await loadCategoriesAndBibliographies();
-            } else {
-                alert('Lütfen başlık ve URL girin.');
+            const title = categoryTitleInput.value.trim();
+            if (!title) {
+                alert('Kategori başlığı gerekli!');
+                return;
             }
+            // Kategori yoksa ekle
+            const catRef = db.ref('categories');
+            let catSnapshot = await catRef.orderByChild('title').equalTo(title).once('value');
+            if (!catSnapshot.exists()) {
+                const newCatRef = catRef.push();
+                await newCatRef.set({ title: title });
+            }
+            categoryModal.style.display = 'none';
+            await loadCategoriesAndBibliographies();
         });
     }
 
-    // Toplu kaynakça ekleme
-    const bulkBibliographyForm = document.getElementById('bulk-bibliography-form');
-    if (bulkBibliographyForm) {
-        bulkBibliographyForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const bulkTextArea = document.getElementById('bulk-bibliography');
-            const lines = bulkTextArea.value.trim().split('\n');
-            const categoryInput = document.getElementById('bulk-bibliography-category');
-            const category = categoryInput ? (categoryInput.value.trim() || 'Diğer') : 'Diğer';
-            let addedCount = 0;
-            for (let line of lines) {
-                line = line.trim();
-                if (!line) continue;
+    // Toplu kaynak ekleme (bulk-resources)
+    const parseBulkBtn = document.getElementById('parse-bulk-btn');
+    const saveBulkBtn = document.getElementById('save-bulk-resources-btn');
+    const bulkResourcesCategory = document.getElementById('bulk-resources-category');
+    const bulkResourcesText = document.getElementById('bulk-resources-text');
+    const bulkPreview = document.getElementById('bulk-resources-preview');
+    let parsedBulkResources = [];
+
+    if (parseBulkBtn && bulkResourcesCategory && bulkResourcesText && bulkPreview && saveBulkBtn) {
+        parseBulkBtn.addEventListener('click', () => {
+            const catId = bulkResourcesCategory.value;
+            const lines = bulkResourcesText.value.trim().split('\n').filter(l => l.trim() !== '');
+            parsedBulkResources = [];
+            bulkPreview.innerHTML = '';
+            if (!catId) {
+                alert('Lütfen bir kategori seçin!');
+                return;
+            }
+            lines.forEach(line => {
                 let title = line;
                 let url = '';
-                // "Başlık - URL" veya sadece URL
                 const separatorIndex = line.lastIndexOf(' - ');
                 if (separatorIndex > 0) {
                     title = line.substring(0, separatorIndex).trim();
@@ -78,20 +100,87 @@ document.addEventListener('DOMContentLoaded', () => {
                         title = 'Başlıksız Kaynak';
                     }
                 } else {
-                    continue;
+                    return;
                 }
                 if (url.startsWith('http://') || url.startsWith('https://')) {
-                    await addBibliographyFirebase(category, title, url);
-                    addedCount++;
+                    parsedBulkResources.push({ title, url });
                 }
-            }
-            if (addedCount > 0) {
-                bulkTextArea.value = '';
-                await loadCategoriesAndBibliographies();
-                alert(`${addedCount} kaynakça başarıyla eklendi.`);
+            });
+            if (parsedBulkResources.length > 0) {
+                bulkPreview.innerHTML = `<ul>${parsedBulkResources.map(r => `<li>${r.title} - <a href='${r.url}' target='_blank'>${r.url}</a></li>`).join('')}</ul>`;
+                saveBulkBtn.style.display = 'inline-block';
             } else {
-                alert('Geçerli formatta kaynakça bulunamadı veya eklenemedi.');
+                bulkPreview.innerHTML = '<em>Hiçbir geçerli kaynak bulunamadı.</em>';
+                saveBulkBtn.style.display = 'none';
             }
+        });
+        saveBulkBtn.addEventListener('click', async () => {
+            const catId = bulkResourcesCategory.value;
+            if (!catId) {
+                alert('Lütfen bir kategori seçin!');
+                return;
+            }
+            if (parsedBulkResources.length === 0) {
+                alert('Eklenebilecek kaynak yok. Lütfen önce analiz et butonunu kullanın.');
+                return;
+            }
+            for (const r of parsedBulkResources) {
+                const resRef = db.ref('resources').push();
+                await resRef.set({
+                    categoryId: catId,
+                    title: r.title,
+                    urls: [r.url]
+                });
+            }
+            parsedBulkResources = [];
+            bulkResourcesText.value = '';
+            bulkPreview.innerHTML = '';
+            saveBulkBtn.style.display = 'none';
+            await loadCategoriesAndBibliographies();
+            alert('Kaynaklar başarıyla eklendi.');
+        });
+    }
+
+    // Kategori dropdownlarını güncelle
+    function updateCategoryDropdowns() {
+        const catRef = db.ref('categories');
+        catRef.once('value').then(snapshot => {
+            const categories = snapshot.val() || {};
+            // Kategori seçiciler
+            const dropdownIds = [
+                'resource-category',
+                'bulk-resources-category',
+                'category-filter',
+                'bibliography-category',
+                'bulk-bibliography-category'
+            ];
+            dropdownIds.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    const currentVal = select.value;
+                    select.innerHTML = '';
+                    // Varsayılan seçenekler
+                    if (id === 'category-filter') {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Tüm Kategoriler';
+                        select.appendChild(opt);
+                    } else if (id === 'bulk-resources-category' || id === 'resource-category') {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Kategori Seçiniz';
+                        select.appendChild(opt);
+                    }
+                    Object.entries(categories).forEach(([catId, catData]) => {
+                        const opt = document.createElement('option');
+                        opt.value = catId;
+                        opt.textContent = catData.title;
+                        select.appendChild(opt);
+                    });
+                    // Önceki seçim korunmaya çalışılır
+                    if (currentVal) select.value = currentVal;
+                }
+            });
         });
     }
 
@@ -140,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const categories = catSnap.val() || {};
         const resources = resSnap.val() || {};
         renderBibliographyAccordion(categories, resources);
+        updateCategoryDropdowns();
     }
 
     function renderBibliographyAccordion(categories, resources) {
