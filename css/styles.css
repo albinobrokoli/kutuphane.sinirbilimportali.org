@@ -61,7 +61,108 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    /* Animasyonlu gradient arka plan */
+    background: linear-gradient(120deg, #0f2027, #2c5364, #7b2ff7, #2e6bff, #20b2aa, #0a0a0a);
+    background-size: 400% 400%;
+    animation: animated-bg-gradient 18s ease-in-out infinite;
 }
+
+/* Ana kapsayıcıya da arka plan animasyonu ekle (index.html ve library.html) */
+.home-container, .library-container {
+    position: relative;
+    min-height: 100vh;
+    z-index: 1;
+}
+
+.home-container::before, .library-container::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1;
+    background: inherit;
+    background-size: 400% 400%;
+    animation: animated-bg-gradient 18s ease-in-out infinite;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+/* Accordion ve buton geçişlerini daha yumuşak yap */
+.category-header, .resource-title {
+    transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s, transform 0.3s;
+    cursor: pointer;
+}
+.category-header:hover, .resource-title:hover {
+    background: rgba(123,47,247,0.15);
+    color: var(--accent-secondary);
+    transform: scale(1.03);
+}
+
+.category.active .category-header, .category-header.active {
+    background: rgba(46,107,255,0.13);
+    color: var(--accent-primary);
+}
+
+.category-content, .resource-links {
+    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s, padding 0.4s;
+    overflow: hidden;
+}
+
+.category.active .category-content {
+    max-height: 1200px;
+    opacity: 1;
+    padding-top: 1.2rem;
+}
+
+.category-content {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+}
+
+/* Buton animasyonunu güçlendir */
+.btn {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: 
+        background var(--transition-fast) ease-in-out,
+        transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow var(--transition-fast) ease-in-out;
+    position: relative;
+    overflow: hidden;
+    background: var(--accent-gradient);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(123, 47, 247, 0.3);
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+/* Accordion ok simgesi animasyonu */
+.toggle-icon {
+    display: inline-block;
+    margin-left: 1rem;
+    font-size: 1.5rem;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.category.active .toggle-icon {
+    transform: rotate(45deg);
+}
+
+/* Modern arka plan animasyonu */
+@keyframes animated-bg-gradient {
+    0% { background-position: 0% 50%; }
+    25% { background-position: 50% 100%; }
+    50% { background-position: 100% 50%; }
+    75% { background-position: 50% 0%; }
+    100% { background-position: 0% 50%; }
+}
+
 
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Montserrat', 'Arial', sans-serif;
@@ -655,36 +756,206 @@ footer {
 }
 
 /* Responsive Styles */
+@media (max-width: 1200px) {
+    :root {
+        --font-size-xl: 2.2rem;
+        --font-size-lg: 1.6rem;
+        --space-xl: 4rem;
+        --space-lg: 2.5rem;
+    }
+    
+    .library-content {
+        padding: var(--space-md);
+    }
+    
+    .home-container {
+        max-width: 90%;
+    }
+    
+    .library-container {
+        max-width: 90%;
+    }
+}
+
+@media (max-width: 992px) {
+    :root {
+        --font-size-xl: 2rem;
+        --font-size-lg: 1.5rem;
+        --font-size-md: 1.1rem;
+        --font-size-sm: 0.95rem;
+        --font-size-xs: 0.85rem;
+        --space-xl: 3.5rem;
+        --space-lg: 2rem;
+    }
+    
+    .neuroscience-image {
+        margin: 0 auto;
+        max-width: 90%;
+    }
+    
+    .category-header h2 {
+        font-size: var(--font-size-md);
+    }
+    
+    .resource-item {
+        padding: var(--space-sm) var(--space-xs);
+    }
+}
+
 @media (max-width: 768px) {
+    :root {
+        --font-size-xl: 1.8rem;
+        --font-size-lg: 1.4rem;
+        --font-size-md: 1rem;
+        --font-size-sm: 0.9rem;
+        --font-size-xs: 0.8rem;
+        --space-md: 1.5rem;
+    }
+    
+    body {
+        padding-bottom: 5rem;
+    }
+    
     .main-title {
-        font-size: calc(var(--font-size-xl) * 0.8);
+        font-size: var(--font-size-xl);
+        margin-bottom: var(--space-sm);
     }
     
     .subtitle {
-        font-size: calc(var(--font-size-md) * 0.9);
+        font-size: var(--font-size-sm);
+        margin-bottom: var(--space-md);
     }
     
     .hero-content {
         padding: var(--space-md);
+        text-align: center;
     }
     
     .quick-links {
         flex-direction: column;
         gap: var(--space-xs);
+        width: 100%;
     }
     
     .header-content {
         flex-direction: column;
+        align-items: center;
+        text-align: center;
         gap: var(--space-sm);
+        padding: var(--space-sm);
+    }
+    
+    .back-btn {
+        margin-top: var(--space-xs);
     }
     
     .search-container {
         flex-direction: column;
         gap: var(--space-xs);
+        width: 100%;
+        padding: 0 var(--space-sm);
     }
     
     #searchInput, #searchButton {
-        border-radius: var(--radius-xl);
+        width: 100%;
+        border-radius: var(--radius-md);
+        margin: 0;
+    }
+    
+    #searchButton {
+        margin-top: var(--space-xs);
+    }
+    
+    .category-content {
+        padding: var(--space-xs);
+    }
+    
+    .resource-title {
+        font-size: var(--font-size-sm);
+        line-height: 1.4;
+    }
+    
+    .resource-links {
+        padding: var(--space-xs);
+    }
+    
+    .resource-citation {
+        font-size: calc(var(--font-size-xs) * 0.95);
+    }
+    
+    .url-list {
+        padding-left: var(--space-sm);
+    }
+    
+    .url-list li {
+        margin-bottom: var(--space-xs);
+    }
+    
+    footer .footer-content {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-sm);
+    }
+}
+
+@media (max-width: 576px) {
+    :root {
+        --font-size-xl: 1.6rem;
+        --font-size-lg: 1.3rem;
+        --font-size-md: 0.95rem;
+        --font-size-sm: 0.85rem;
+        --font-size-xs: 0.75rem;
+    }
+    
+    .home-container, 
+    .library-container {
+        max-width: 100%;
+        padding: var(--space-xs);
+    }
+    
+    .neuroscience-image {
+        margin: 0 auto var(--space-md);
+    }
+    
+    .neuroscience-image img {
+        max-height: 200px;
+    }
+    
+    .image-caption {
+        font-size: var(--font-size-xs);
+    }
+    
+    .category-header {
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
+    .category-content {
+        padding: var(--space-xs) var(--space-xs);
+    }
+    
+    .toggle-icon {
+        width: 24px;
+        height: 24px;
+        font-size: 1.2rem;
+    }
+    
+    .resource-list {
+        padding-left: 0;
+        list-style-type: none;
+    }
+    
+    .resource-item {
+        padding: var(--space-xs) 0;
+    }
+    
+    .resource-links {
+        margin-left: 0;
+    }
+    
+    /* Fix for mobile scroll */
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
     }
 }
 
